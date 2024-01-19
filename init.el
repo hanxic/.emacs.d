@@ -383,6 +383,67 @@
 (with-eval-after-load 'org-faces (set-face-attribute 'org-meta-line nil :inherit '(font-lock-comment-face fixed-pitch)))
 (with-eval-after-load 'org-faces (set-face-attribute 'org-checkbox nil :inherit 'fixed-pitch))
 
+;; (defmacro def-pairs (pairs)
+;;   "Define functions for pairing. PAIRS is an alist of (NAME . STRING)
+;; conses, where NAME is the function name that will be created and
+;; STRING is a single-character string that marks the opening character.
+
+;;   (def-pairs ((paren . \"(\")
+;;               (bracket . \"[\"))
+
+;; defines the functions WRAP-WITH-PAREN and WRAP-WITH-BRACKET,
+;; respectively."
+;;   `(progn
+;;      ,@(loop for (key . val) in pairs
+;;              collect
+;;              `(defun ,(read (concat
+;;                              "wrap-with-"
+;;                              (prin1-to-string key)
+;;                              "s"))
+;;                   (&optional arg)
+;;                 (interactive "p")
+;;                 (sp-wrap-with-pair ,val)))))
+
+;; (def-pairs ((paren . "(")
+;;             (bracket . "[")
+;;             (brace . "{")
+;;             (single-quote . "'")
+;;             (double-quote . "\"")
+;;             (back-quote . "`")))
+
+(defmacro def-pairs (pairs)
+  `(progn
+     ,@(cl-loop for (key . val) in pairs
+		collect
+		`(defun ,(read (concat
+				"wrap-with-"
+				(prin1-to-string key)
+				"s"))
+		     (&optional arg)
+		   (interactive "p")
+		   (sp-wrap-with-pair ,val)))))
+
+(def-pairs ((paren . "(")
+	    (bracket . "[")
+	    (brace . "{")
+	    (single-quote . "'")
+	    (double-quote . "\"")
+	    (back-quote . "``")))
+
+(defun multiply-many (x &rest operands)
+  (dolist (operand operands)
+    (when operand
+      (setq x (* x operand))))
+  x)
+;; Multiply any non-nil operands
+(defun multiply-many (x &rest operands)
+  (dolist (operand operands)
+    (when operand
+      (setq x (* x operand))))
+  x)
+(multiply-many 5)
+(multiply-many 5 2)
+
 (use-package smartparens-mode
   :ensure smartparens  ;; install the package
   :hook (prog-mode text-mode markdown-mode org-mode) ;; add `smartparens-mode` to these hooks
@@ -390,16 +451,53 @@
   ;; load default config
   (require 'smartparens-config)
   :bind
-  (("M-<right>" . sp-forward-slurp-sexp)
+  (("C-(" . 'wrap-with-parens ) 
+   ("C-{" . 'wrap-with-braces)
+   ("M-)" . sp-unwrap-sexp)
+   ("M-(" . sp-backward-unwrap-sexp)
+   ("M-<right>" . sp-forward-slurp-sexp)
    ("M-<left>" . sp-forward-barf-sexp)
    ("C-<left>" . sp-backward-slurp-sexp)
    ("C-<right>" . sp-backward-barf-sexp)
 
   ))
 
+(setq sp-pairs
+      '((t
+  (:open "\\\\(" :close "\\\\)" :actions
+	 (insert wrap autoskip navigate))
+  (:open "\\{" :close "\\}" :actions
+	 (insert wrap autoskip navigate))
+  (:open "\\(" :close "\\)" :actions
+	 (insert wrap autoskip navigate))
+  (:open "\\\"" :close "\\\"" :actions
+	 (insert wrap autoskip navigate))
+  (:open "\"" :close "\"" :actions
+	 (insert wrap autoskip navigate escape)
+	 :unless
+	 (sp-in-string-quotes-p)
+	 :post-handlers
+	 (sp-escape-wrapped-region sp-escape-quotes-after-insert))
+  (:open "'" :close "'" :actions
+	 (insert wrap autoskip navigate escape)
+	 :unless
+	 (sp-in-string-quotes-p sp-point-after-word-p)
+	 :post-handlers
+	 (sp-escape-wrapped-region sp-escape-quotes-after-insert))
+  (:open "(" :close ")" :actions
+	 (insert wrap autoskip navigate))
+  (:open "[" :close "]" :actions
+	 (insert wrap autoskip navigate))
+  (:open "{" :close "}" :actions
+	 (insert wrap autoskip navigate))
+  (:open "`" :close "`" :actions
+	 (insert wrap autoskip navigate))))
+)
+
 (use-package undo-tree
   :ensure t
   :config
+  (undo-tree-mode 1)
   (global-undo-tree-mode 1)
   :bind
   (("s-z" . undo-tree-undo)
