@@ -1,0 +1,12 @@
+*~
+tutorial/
+transient/
+elpa/
+auto-save-list/
+.cache
+places
+projectile-bookmarks.eld
+projectile.cache
+recentf
+ac-comphist.dat
+opam-user-setup.el
