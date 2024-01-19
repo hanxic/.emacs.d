@@ -466,6 +466,14 @@
 (save-place-mode 1)
 
 ;; ######## Programming Environment ######## 
+
+;; ******** Markdown ********
+(use-package markdown-mode
+  :ensure t
+  :mode ("README\\.md\\'" . gfm-mode)
+  :init (setq markdown-command "multimarkdown"))
+
+
 ;;;
 ;;; miscellaneous
 ;;;
@@ -665,7 +673,7 @@
  '(coq-unicode-tokens-enable nil)
  '(helm-minibuffer-history-key "M-p")
  '(package-selected-packages
-   '(latex-preview-pane yasnippet-snippets company-auctex auctex undo-tree smartparens visual-fill-column org-bullets evil-nerd-commenter evil-magit evil-collection helpful which-key rainbow-delimiters doom-themes command-log-mode use-package tuareg treemacs-tab-bar treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired treemacs-evil restart-emacs proof-general powerline ocp-indent ocamlformat merlin-eldoc helm-rg helm-projectile helm-ag haskell-mode flycheck-ocaml dune dracula-theme company-coq beacon auto-complete))
+   '(markdown-mode latex-preview-pane yasnippet-snippets company-auctex auctex undo-tree smartparens visual-fill-column org-bullets evil-nerd-commenter evil-magit evil-collection helpful which-key rainbow-delimiters doom-themes command-log-mode use-package tuareg treemacs-tab-bar treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired treemacs-evil restart-emacs proof-general powerline ocp-indent ocamlformat merlin-eldoc helm-rg helm-projectile helm-ag haskell-mode flycheck-ocaml dune dracula-theme company-coq beacon auto-complete))
  '(proof-disappearing-proofs nil)
  '(proof-general-debug nil)
  '(proof-layout-windows-on-visit-file t)
