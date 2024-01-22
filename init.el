@@ -42,6 +42,37 @@
 
 (use-package command-log-mode)
 
+;; ******** Tree-sitter ********
+(use-package tree-sitter
+  :config
+  (global-tree-sitter-mode))
+
+(use-package tree-sitter-langs
+  :after (tree-sitter))
+
+(use-package tree-sitter-indent
+  :after (tree-sitter))
+;; (setq treesit-language-source-alist
+;;    '((bash "https://github.com/tree-sitter/tree-sitter-bash")
+;;      (cmake "https://github.com/uyha/tree-sitter-cmake")
+;;      (css "https://github.com/tree-sitter/tree-sitter-css")
+;;      (elisp "https://github.com/Wilfred/tree-sitter-elisp")
+;;      (go "https://github.com/tree-sitter/tree-sitter-go")
+;;      (html "https://github.com/tree-sitter/tree-sitter-html")
+;;      (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "master" "src")
+;;      (json "https://github.com/tree-sitter/tree-sitter-json")
+;;      (make "https://github.com/alemuller/tree-sitter-make")
+;;      (markdown "https://github.com/ikatyang/tree-sitter-markdown")
+;;      (python "https://github.com/tree-sitter/tree-sitter-python")
+;;      (toml "https://github.com/tree-sitter/tree-sitter-toml")
+;;      (tsx "https://github.com/tree-sitter/tree-sitter-typescript" "master" "tsx/src")
+;;      (typescript "https://github.com/tree-sitter/tree-sitter-typescript" "master" "typescript/src")
+;;      (yaml "https://github.com/ikatyang/tree-sitter-yaml")
+;;      (haskell "https://github.com/tree-sitter/tree-sitter-haskell")
+;;      (ocaml "https://github.com/tree-sitter/tree-sitter-ocaml")
+;;      ))
+
+;; (mapc #'treesit-install-language-grammar (mapcar #'car treesit-language-source-alist))
 ;; ******** ripgrep + helm + projectile ********
 
 (use-package projectile
@@ -106,7 +137,8 @@
 (require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
 ;; ## end of OPAM user-setup addition for emacs / base ## keep this line
 
-
+(use-package helm-tree-sitter
+  )
 ;; ******** Doom-modeline ********
 (use-package doom-themes
   :ensure t
@@ -351,7 +383,6 @@
 	'("~/things/todolist.org")))
 
 (use-package org-bullets
-  :after org
   :hook (org-mode . org-bullets-mode)
   :custom
   (org-bullets-bullet-list '("◉" "○" "●" "○" "●" "○" "●")))
@@ -455,10 +486,10 @@
    ("C-{" . 'wrap-with-braces)
    ("M-)" . sp-unwrap-sexp)
    ("M-(" . sp-backward-unwrap-sexp)
-   ("M-<right>" . sp-forward-slurp-sexp)
-   ("M-<left>" . sp-forward-barf-sexp)
-   ("C-<left>" . sp-backward-slurp-sexp)
-   ("C-<right>" . sp-backward-barf-sexp)
+   ("M-S-<right>" . sp-forward-slurp-sexp)
+   ("M-S-<left>" . sp-forward-barf-sexp)
+   ("C-S-<left>" . sp-backward-slurp-sexp)
+   ("C-S-<right>" . sp-backward-barf-sexp)
 
   ))
 
@@ -585,12 +616,18 @@
 (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
 (add-hook 'LaTeX-mode-hook 'flyspell-mode)
 
+;; ******** FlyCheck ********
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode))
+
 ;;;
 ;;; ocaml configuration
 ;;;
 ;; add opam emacs directory to the load-path
 (setq opam-dir (substring (shell-command-to-string "opam config var prefix 2> /dev/null") 0 -1))
 (setq opam-share (substring (shell-command-to-string "opam config var share 2> /dev/null") 0 -1))
+
 (add-to-list 'load-path (concat opam-share "/emacs/site-lisp"))
 
 
@@ -748,6 +785,7 @@
               ;; enable Flycheck checker
              (flycheck-ocaml-setup))))
 
+
 ;; coq
 ;; (load "~/.emacs.d/lisp/PG/generic/proof-site")
 ;; (add-hook 'proof-ready-for-assistant-hook (lambda () (show-paren-mode 0)))
@@ -757,6 +795,37 @@
      (add-to-list 'load-path
    "/Users/garychen/.opam/4.14.0/share/emacs/site-lisp")
 
+;; ******** Haskell ********
+(use-package haskell-mode)
+(use-package hlint-refactor
+  :after (haskell-mode)
+  :hook (hlint-refactor-mode . haskell-mode-hook))
+(use-package flycheck-haskell
+  :after (flycheck haskell-mode)
+  ) 
+(use-package lsp-haskell
+  :after (lsp-mode))
+
+
+;; ******** LSP ********
+(use-package lsp-mode
+  :init
+  ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+  (setq lsp-keymap-prefix "C-c l")
+  :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
+         ((haskell-mode tuareg-mode) . lsp)
+         ;; if you want which-key integration
+         (lsp-mode . lsp-enable-which-key-integration))
+  :commands lsp )
+
+;; optionally
+(use-package lsp-ui
+  :hook (lsp-mode . lsp-ui-mode)
+  :commands lsp-ui-mode
+  )
+;; if you are helm user
+(use-package helm-lsp :commands helm-lsp-workspace-symbol)
+;; if you are ivy user
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -771,7 +840,7 @@
  '(coq-unicode-tokens-enable nil)
  '(helm-minibuffer-history-key "M-p")
  '(package-selected-packages
-   '(markdown-mode latex-preview-pane yasnippet-snippets company-auctex auctex undo-tree smartparens visual-fill-column org-bullets evil-nerd-commenter evil-magit evil-collection helpful which-key rainbow-delimiters doom-themes command-log-mode use-package tuareg treemacs-tab-bar treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired treemacs-evil restart-emacs proof-general powerline ocp-indent ocamlformat merlin-eldoc helm-rg helm-projectile helm-ag haskell-mode flycheck-ocaml dune dracula-theme company-coq beacon auto-complete))
+   '(ocaml-lsp lsp-haskell helm-lsp lsp-ui lsp-mode flycheck-haskell hlint-refactor tree-sitter-indent tree-sitter-langs helm-tree-sitter tree-sitter markdown-mode latex-preview-pane yasnippet-snippets company-auctex auctex undo-tree smartparens visual-fill-column org-bullets evil-nerd-commenter evil-magit evil-collection helpful which-key rainbow-delimiters doom-themes command-log-mode use-package tuareg treemacs-tab-bar treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired treemacs-evil restart-emacs proof-general powerline ocp-indent ocamlformat merlin-eldoc helm-rg helm-projectile helm-ag haskell-mode flycheck-ocaml dune dracula-theme company-coq beacon auto-complete))
  '(proof-disappearing-proofs nil)
  '(proof-general-debug nil)
  '(proof-layout-windows-on-visit-file t)
