@@ -11,3 +11,4 @@ recentf
 ac-comphist.dat
 opam-user-setup.el
 .*
+/eshell/
