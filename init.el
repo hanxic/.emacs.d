@@ -26,6 +26,17 @@
 
 (global-display-line-numbers-mode t)
 
+(add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
+
+;; Set the fill column indicator column to 80
+(setq-default display-fill-column-indicator-column 80)
+
+;; Ensure that other modes or configurations don't overrule it
+(add-hook 'after-change-major-mode-hook
+          (lambda ()
+            (setq display-fill-column-indicator-column 80)))
+
+
 (dolist (mode '(org-mode-hook
 		term-mode-hook
 		eshell-mode-hook
@@ -43,15 +54,15 @@
 (use-package command-log-mode)
 
 ;; ******** Tree-sitter ********
-(use-package tree-sitter
-  :config
-  (global-tree-sitter-mode))
+;; (use-package tree-sitter
+;;   :config
+;;   (global-tree-sitter-mode))
 
-(use-package tree-sitter-langs
-  :after (tree-sitter))
+;; (use-package tree-sitter-langs
+;;   :after (tree-sitter))
 
-(use-package tree-sitter-indent
-  :after (tree-sitter))
+;; (use-package tree-sitter-indent
+;;   :after (tree-sitter))
 ;; (setq treesit-language-source-alist
 ;;    '((bash "https://github.com/tree-sitter/tree-sitter-bash")
 ;;      (cmake "https://github.com/uyha/tree-sitter-cmake")
@@ -245,11 +256,18 @@
   (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
 
   (evil-set-initial-state 'messages-buffer-mode 'normal)
-  (evil-set-initial-state 'dashboard-mode 'normal))
+  (evil-set-initial-state 'dashboard-mode 'normal)
+  ;; (setq evil-undo-system 'undo-fu)
+  )
+
+;; (use-package undo-fu
+;;   :config
+;;   (global-set-key (kbd "s-z") 'undo-fu-only-undo)
+;;   (global-set-key (kbd "s-Z") 'undo-fu-only-redo))
 
 (evil-mode 1)
 (defun disable-evil-mode-in-doc-view ()
-  "Disable evil mode when entering doc-view-mode."
+  ;; "Disable evil mode when entering doc-view-mode."
   (when (eq major-mode 'doc-view-mode)
     (evil-mode -1)))
 
@@ -302,6 +320,7 @@
 
 ;; ******** Magit ********
 (use-package magit
+  :ensure t
   :init
   (message "Loading Magit!")
   :config
@@ -509,12 +528,12 @@
 	 (sp-in-string-quotes-p)
 	 :post-handlers
 	 (sp-escape-wrapped-region sp-escape-quotes-after-insert))
-  (:open "'" :close "'" :actions
-	 (insert wrap autoskip navigate escape)
-	 :unless
-	 (sp-in-string-quotes-p sp-point-after-word-p)
-	 :post-handlers
-	 (sp-escape-wrapped-region sp-escape-quotes-after-insert))
+  ;; (:open "'" :close "'" :actions
+  ;; 	 (insert wrap autoskip navigate escape)
+  ;; 	 :unless
+  ;; 	 (sp-in-string-quotes-p sp-point-after-word-p)
+  ;; 	 :post-handlers
+  ;; 	 (sp-escape-wrapped-region sp-escape-quotes-after-insert))
   (:open "(" :close ")" :actions
 	 (insert wrap autoskip navigate))
   (:open "[" :close "]" :actions
@@ -589,8 +608,8 @@
 (global-set-key (kbd "C-S-j") 'windmove-down)
 (global-set-key (kbd "C-S-h") 'windmove-left)
 (global-set-key (kbd "C-S-l") 'windmove-right)
-(define-key evil-normal-state-map (kbd "C-o") 'evil-jump-forward)
-(define-key evil-normal-state-map (kbd "C-S-o") 'evil-jump-backward)
+;; (define-key evil-normal-state-map (kbd "C-o") 'evil-jump-forward)
+;; (define-key evil-normal-state-map (kbd "C-S-o") 'evil-jump-backward)
 (global-undo-tree-mode 1)
 (save-place-mode 1)
 
@@ -615,6 +634,12 @@
 ;;;
 (autoload 'flyspell-mode "flyspell" "On-the-fly spelling checker." t)
 (add-hook 'LaTeX-mode-hook 'flyspell-mode)
+
+;; ******** LLVM ********
+
+
+
+
 
 ;; ******** FlyCheck ********
 (use-package flycheck
@@ -794,6 +819,7 @@
 (add-hook 'coq-mode-hook #'company-coq-mode)
      (add-to-list 'load-path
    "/Users/garychen/.opam/4.14.0/share/emacs/site-lisp")
+;; (add-hook 'coq-mode-hook #'undo-tree-mode)
 
 ;; ******** Haskell ********
 (use-package haskell-mode)
@@ -826,6 +852,7 @@
 ;; if you are helm user
 (use-package helm-lsp :commands helm-lsp-workspace-symbol)
 ;; if you are ivy user
+
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
