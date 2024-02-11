@@ -424,6 +424,14 @@
 (use-package visual-fill-column
   :hook (org-mode . hanxic/org-mode-visual-fill))
 
+(setq org-capture-templates
+      '(("t" "Tasks / Projects")
+	("tt" "Task" entry (file+olp "~/things/todolist.org" "Inbox")
+         "* TODO %?\n  %U\n  %a\n  %i" :empty-lines 1)
+	))
+(define-key global-map (kbd "C-c j")
+  (lambda () (interactive) (org-capture nil "j")))
+
 (with-eval-after-load 'org-faces (set-face-attribute 'org-block nil :foreground nil :inherit 'fixed-pitch))
 (with-eval-after-load 'org-faces (set-face-attribute 'org-code nil   :inherit '(shadow fixed-pitch)))
 (with-eval-after-load 'org-faces (set-face-attribute 'org-table nil :inherit '(shadow fixed-pitch)))
