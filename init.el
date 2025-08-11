@@ -24,6 +24,14 @@
       size-indication-mode t
       )
 
+(setq backup-directory-alist `(("." . "~/.emacs.d/backup"))
+      backup-by-copying t    ; Don't delink hardlinks
+      version-control t      ; Use version numbers on backups
+      delete-old-versions t  ; Automatically delete excess backups
+      kept-new-versions 2   ; how many of the newest versions to keep
+      kept-old-versions 3    ; and how many of the old
+      )
+
 (global-display-line-numbers-mode t)
 
 (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
@@ -50,7 +58,7 @@
 (set-fringe-mode 10)    ; Give some breathing room
 
 (menu-bar-mode -1)      ; Disable the menu bar
-
+(defun tilde () (interactive) (insert "~"))
 (use-package command-log-mode)
 
 ;; ******** Tree-sitter ********
@@ -150,25 +158,35 @@
 
 (use-package helm-tree-sitter
   )
-;; ******** Doom-modeline ********
-(use-package doom-themes
-  :ensure t
-  :config
-  ;; Global settings (defaults)
-  (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
-        doom-themes-enable-italic t) ; if nil, italics is universally disabled
-  (load-theme 'doom-one t)
+;; ;; ******** Doom-modeline ********
 
-  ;; Enable flashing mode-line on errors
-  (doom-themes-visual-bell-config)
-  ;; Enable custom neotree theme (all-the-icons must be installed!).
-  (doom-themes-neotree-config)
-  ;; or for treemacs users
-  (setq doom-themes-treemacs-theme "doom-atom") ; use "doom-colors" for less minimal icon theme
-  (doom-themes-treemacs-config)
-  ;; Corrects (and improves) org-mode's native fontification.
-					;  (doom-themes-org-config))
+(use-package ef-themes
+  :config
+  (setq ef-themes-to-toggle '(ef-summer ef-winter))
+  ;; (setq ef-themes-mixed-fonts nil
+  ;; 	ef-themes-variable-pitch-ui t)
+  ;; (mapc #'disable-theme custom-enabled-themes)
+  (ef-themes-select 'ef-winter)
   )
+
+;; (use-package doom-themes
+;;   :ensure t
+;;   :config
+;;   ;; Global settings (defaults)
+;;   (setq doom-themes-enable-bold t    ; if nil, bold is universally disabled
+;;         doom-themes-enable-italic t) ; if nil, italics is universally disabled
+;;   (load-theme 'doom-one t)
+
+;;   ;; Enable flashing mode-line on errors
+;;   (doom-themes-visual-bell-config)
+;;   ;; Enable custom neotree theme (all-the-icons must be installed!).
+;;   (doom-themes-neotree-config)
+;;   ;; or for treemacs users
+;;   (setq doom-themes-treemacs-theme "doom-atom") ; use "doom-colors" for less minimal icon theme
+;;   (doom-themes-treemacs-config)
+;;   ;; Corrects (and improves) org-mode's native fontification.
+;; 					;  (doom-themes-org-config))
+;;   )
 
 
 
@@ -266,6 +284,8 @@
 ;;   (global-set-key (kbd "s-Z") 'undo-fu-only-redo))
 
 (evil-mode 1)
+(define-key isearch-mode-map (kbd "<down>") 'isearch-ring-advance)
+(define-key isearch-mode-map (kbd "<up>") 'isearch-ring-retreat)
 (defun disable-evil-mode-in-doc-view ()
   ;; "Disable evil mode when entering doc-view-mode."
   (when (eq major-mode 'doc-view-mode)
@@ -400,6 +420,8 @@
   (advice-add 'org-refile :after 'org-save-all-org-buffers)
   (setq org-agenda-files
 	'("~/things/todolist.org")))
+
+;; (add-hook 'after-init-hook '(lambda () (org-agenda-list 1)))
 
 (use-package org-bullets
   :hook (org-mode . org-bullets-mode)
@@ -555,12 +577,11 @@
 (use-package undo-tree
   :ensure t
   :config
-  (undo-tree-mode 1)
   (global-undo-tree-mode 1)
+  (setq undo-tree-auto-save-history nil)
   :bind
   (("s-z" . undo-tree-undo)
    ("s-Z" . undo-tree-redo)))
-
 
 ;; ******** LaTeX ********
 
@@ -587,6 +608,10 @@
 
 (use-package company-auctex
   )
+(company-auctex-init)
+
+(add-hook 'TeX-mode-hook
+	  'company-mode)
 
 (use-package yasnippet                  ; Snippets
   :ensure t
@@ -606,6 +631,19 @@
 
 (use-package latex-preview-pane)
 (latex-preview-pane-enable)
+;; (add-hook 'TeX-mode-hook
+;; 	  'latex-preview-pane-mode)
+(setq LaTeX-item-indent 0)
+(add-hook 'TeX-mode-hook 'turn-on-auto-fill)
+(setq TeX-open-quote "\"")
+(setq TeX-close-quote "\"")
+(add-hook 'TeX-mode-hook
+          (lambda () (set (make-local-variable 'TeX-electric-math)
+                          (cons "$" "$"))))
+(add-hook 'TeX-mode-hook
+          (lambda () (set (make-local-variable 'TeX-electric-math)
+                          (cons "\\(" "\\)"))))
+(setq LaTeX-includegraphics-read-file 'LaTeX-includegraphics-read-file-relative)
 ;; ******** Company ********
 ;; (use-package company
 ;;   :config
@@ -624,10 +662,12 @@
 ;; ######## Programming Environment ######## 
 
 ;; ******** Markdown ********
-(use-package markdown-mode
-  :ensure t
-  :mode ("README\\.md\\'" . gfm-mode)
-  :init (setq markdown-command "multimarkdown"))
+;; (use-package markdown-mode
+;;   :ensure t
+;;   :mode ("README\\.md\\'" . gfm-mode)
+;;         ("\\.md\\'" . markdown-mode)
+;;   ;; :init (setq markdown-command "multimarkdown")
+;;   )
 
 
 ;;;
@@ -798,14 +838,14 @@
   (custom-set-faces
  '(merlin-type-face ((t (:background "#46484f"))))
  ))
-
+(add-to-list 'auto-mode-alist '("\\.mlg$"      . tuareg-mode) t)
 ;; (custom-set-faces
 ;;  '(merlin-type-face ((t (:background "#46484f"))))
 ;;  :when (eq 'dark (frame-parameter nil 'background-mode)))
 
-(use-package merlin-eldoc
-  :ensure t
-  :hook ((tuareg-mode) . merlin-eldoc-setup))
+;; (use-package merlin-eldoc
+;;   :ensure t
+;;   :hook ((tuareg-mode) . merlin-eldoc-setup))
 
 ;; This uses Merlin internally
 (use-package flycheck-ocaml
@@ -818,6 +858,12 @@
               ;; enable Flycheck checker
              (flycheck-ocaml-setup))))
 
+(let ((opam-share (ignore-errors (car (process-lines "opam" "var" "share")))))
+  (when (and opam-share (file-directory-p opam-share))
+    (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))))
+(require 'caml)
+;; automatically activate caml-mode when eidting .ml, .mli, .mly, .mll
+(add-to-list 'auto-mode-alist '("\\.ml[yl]+$" . tuareg-menhir-mode))
 
 ;; coq
 ;; (load "~/.emacs.d/lisp/PG/generic/proof-site")
@@ -827,10 +873,24 @@
 (add-hook 'coq-mode-hook #'company-coq-mode)
      (add-to-list 'load-path
    "/Users/garychen/.opam/4.14.0/share/emacs/site-lisp")
-;; (add-hook 'coq-mode-hook #'undo-tree-mode)
+(add-hook 'coq-mode-hook #'undo-tree-mode)
+
+
+;; ******** Markdown ********
+(use-package markdown-mode
+  :ensure t
+  :mode ("README\\.md\\'" . gfm-mode)
+  :init
+  (setq markdown-command "multimarkdown")
+  (setq split-height-threshold nil)
+  ;; :hook
+  ;; (markdown-mode . markdown-live-preview-mode)
+  )
 
 ;; ******** Haskell ********
-(use-package haskell-mode)
+(use-package haskell-mode
+  :mode ("\\.hs\\'" . haskell-mode)
+  )
 (use-package hlint-refactor
   :after (haskell-mode)
   :hook (hlint-refactor-mode . haskell-mode-hook))
@@ -838,7 +898,7 @@
   :after (flycheck haskell-mode)
   ) 
 (use-package lsp-haskell
-  :after (lsp-mode))
+  :after (lsp-mode haskell-mode))
 
 
 ;; ******** LSP ********
@@ -850,7 +910,16 @@
          ((haskell-mode tuareg-mode) . lsp)
          ;; if you want which-key integration
          (lsp-mode . lsp-enable-which-key-integration))
-  :commands lsp )
+  :commands lsp
+  :custom
+  (lsp-eldoc-render-all t)
+  (lsp-idle-delay 0.6)
+  (lsp-inlay-hint-enable t)
+  )
+
+(setq gc-cons-threshold 1280000)
+(setq read-process-output-max (* 1024 1024)) ;; 1mb
+(setq lsp-log-io nil)
 
 ;; optionally
 (use-package lsp-ui
@@ -859,8 +928,98 @@
   )
 ;; if you are helm user
 (use-package helm-lsp :commands helm-lsp-workspace-symbol)
-;; if you are ivy user
 
+;; ******** Rust ********
+(use-package rust-mode
+  :mode ("\\.rs\\'" . rust-mode))
+(use-package rustic
+  :after rust-mode
+  )
+
+(setq lsp-rust-analyzer-cargo-watch-command "clippy")
+;; These are optional configurations. See https://emacs-lsp.github.io/lsp-mode/page/lsp-rust-analyzer/#lsp-rust-analyzer-display-chaining-hints for a full list
+(setq lsp-rust-analyzer-display-lifetime-elision-hints-enable "skip_trivial")
+(setq lsp-rust-analyzer-display-chaining-hints t)
+(setq lsp-rust-analyzer-display-lifetime-elision-hints-use-parameter-names nil)
+(setq lsp-rust-analyzer-display-closure-return-type-hints t)
+;; (setq lsp-rust-analyzer-display-parameter-hints nil)
+;; (setq lsp-rust-analyzer-display-reborrow-hints nil)
+
+;; (use-package rustic
+;;   :ensure
+;;   :bind (:map rustic-mode-map
+;;               ("M-j" . lsp-ui-imenu)
+;;               ("M-?" . lsp-find-references)
+;;               ("C-c C-c l" . flycheck-list-errors)
+;;               ("C-c C-c a" . lsp-execute-code-action)
+;;               ("C-c C-c r" . lsp-rename)
+;;               ("C-c C-c q" . lsp-workspace-restart)
+;;               ("C-c C-c Q" . lsp-workspace-shutdown)
+;;               ("C-c C-c s" . lsp-rust-analyzer-status))
+;;   :config
+;;   ;; uncomment for less flashiness
+;;   ;; (setq lsp-eldoc-hook nil)
+;;   ;; (setq lsp-enable-symbol-highlighting nil)
+;;   ;; (setq lsp-signature-auto-activate nil)
+
+;;   ;; comment to disable rustfmt on save
+;;   (setq rustic-format-on-save t)
+;;   (add-hook 'rustic-mode-hook 'rk/rustic-mode-hook))
+
+;; (defun rk/rustic-mode-hook ()
+;;   ;; so that run C-c C-c C-r works without having to confirm, but don't try to
+;;   ;; save rust buffers that are not file visiting. Once
+;;   ;; https://github.com/brotzeit/rustic/issues/253 has been resolved this should
+;;   ;; no longer be necessary.
+;;   (when buffer-file-name
+;;     (setq-local buffer-save-without-query t))
+;;   (add-hook 'before-save-hook 'lsp-format-buffer nil t))
+
+;; (setq lsp-rust-analyzer-cargo-watch-command "clippy")
+;; (setq lsp-eldoc-render-all t)
+;; (setq lsp-idle-delay 0.6)
+;; ;; enable / disable the hints as you prefer:
+;; (setq lsp-inlay-hint-enable t)
+;; ;; These are optional configurations. See https://emacs-lsp.github.io/lsp-mode/page/lsp-rust-analyzer/#lsp-rust-analyzer-display-chaining-hints for a full list
+;; (setq lsp-rust-analyzer-display-lifetime-elision-hints-enable "skip_trivial")
+;; (setq lsp-rust-analyzer-display-chaining-hints t)
+;; (setq lsp-rust-analyzer-display-lifetime-elision-hints-use-parameter-names nil)
+;; (setq lsp-rust-analyzer-display-closure-return-type-hints t)
+;; (setq lsp-rust-analyzer-display-parameter-hints nil)
+;; (setq lsp-rust-analyzer-display-reborrow-hints nil)
+
+;; ******** Customized Functions ********
+;; (defun insert-backtick ()
+;;   "Insert a backtick character."
+;;   (interactive)
+;;   (insert "`")
+;;   )
+(defun insert-character ()
+  "Insert a character of one's selection."
+  (interactive)
+  (let ((char (helm-comp-read "Choose character to insert: " '("~" "`") :must-match t)))
+    (insert char)
+    )
+  )
+
+(use-package yaml-mode
+  :ensure t
+  :mode ("\\.ya?ml\\'" . yaml-mode)
+  )
+
+;; (use-package yaml-pro
+;;   :after yaml-mode
+;;   :hook (yaml-mode . yaml-pro-mode)
+;;   :config
+;;   (map! :map yaml-pro-mode-map
+;;        [remap imenu] #'yaml-pro-jump
+;;         :n "zc" #'yaml-pro-fold-at-point
+;;         :n "zo" #'yaml-pro-unfold-at-point
+;;         :n "gk" #'yaml-pro-prev-subtree
+;;         :n "gj" #'yaml-pro-next-subtree
+;;         :n "gK" #'yaml-pro-up-level
+;;         :n "M-k" #'yaml-pro-move-subtree-up
+;;         :n "M-j" #'yaml-pro-move-subtree-down))
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -873,16 +1032,19 @@
  '(coq-prog-name "coqtop")
  '(coq-script-indent nil)
  '(coq-unicode-tokens-enable nil)
+ '(custom-safe-themes
+   '("f12083eec1537fc3bf074366999f0ee04ab23ab3eaba57614785d88b9db2a5d4" "6b912e025527ffae0feb76217f1a3e494b0699e5219ab59ea4b3a36c319cea17" default))
  '(helm-minibuffer-history-key "M-p")
  '(package-selected-packages
-   '(ocaml-lsp lsp-haskell helm-lsp lsp-ui lsp-mode flycheck-haskell hlint-refactor tree-sitter-indent tree-sitter-langs helm-tree-sitter tree-sitter markdown-mode latex-preview-pane yasnippet-snippets company-auctex auctex undo-tree smartparens visual-fill-column org-bullets evil-nerd-commenter evil-magit evil-collection helpful which-key rainbow-delimiters doom-themes command-log-mode use-package tuareg treemacs-tab-bar treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired treemacs-evil restart-emacs proof-general powerline ocp-indent ocamlformat merlin-eldoc helm-rg helm-projectile helm-ag haskell-mode flycheck-ocaml dune dracula-theme company-coq beacon auto-complete))
+   '(modus-themes helm-lsp lsp-ui lsp-haskell lsp-mode ocaml-lsp flycheck-haskell hlint-refactor tree-sitter-indent tree-sitter-langs helm-tree-sitter tree-sitter markdown-mode latex-preview-pane yasnippet-snippets company-auctex auctex smartparens visual-fill-column org-bullets evil-nerd-commenter evil-magit evil-collection helpful which-key rainbow-delimiters command-log-mode use-package tuareg treemacs-tab-bar treemacs-projectile treemacs-persp treemacs-magit treemacs-icons-dired treemacs-evil restart-emacs proof-general powerline ocp-indent ocamlformat merlin-eldoc helm-rg helm-projectile helm-ag haskell-mode flycheck-ocaml dune company-coq beacon auto-complete))
  '(proof-disappearing-proofs nil)
  '(proof-general-debug nil)
- '(proof-layout-windows-on-visit-file t)
+ '(proof-layout-windows-on-visit-file nil)
  '(proof-script-fly-past-comments t)
  '(proof-splash-enable nil)
  '(proof-three-window-mode-policy 'hybrid)
  '(proof-toolbar-enable nil)
+ '(safe-local-variable-values '((TeX-command-extra-options . "-shell-escape")))
  '(save-place-mode t)
  '(show-paren-mode t)
  '(tool-bar-mode nil)
