@@ -268,6 +268,13 @@
 (setq ispell-dictionary "english")
 (add-hook 'text-mode-hook 'flyspell-mode)
 
+;;; Checking
+(use-package flycheck
+  :ensure t
+  :config
+  (global-flycheck-mode)
+  )
+
 ;;; Customization
 (defun hanxic/elisp-highlight-section ()
   "Make comments starting with ';;;' appear larger."
@@ -347,6 +354,52 @@
                           (cons "\\(" "\\)"))))
 (setq LaTeX-includegraphics-read-file 'LaTeX-includegraphics-read-file-relative)
 
+;;; LSP mode
+(use-package lsp-mode
+  :init
+  ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
+  (setq lsp-keymap-prefix "C-c l")
+  :hook (;; replace XXX-mode with concrete major-mode(e. g. python-mode)
+         ((haskell-mode tuareg-mode) . lsp)
+         ;; if you want which-key integration
+         (lsp-mode . lsp-enable-which-key-integration))
+  :commands lsp
+  :custom
+  (lsp-eldoc-render-all t)
+  (lsp-idle-delay 0.6)
+  (lsp-inlay-hint-enable t)
+  )
+
+(setq gc-cons-threshold 1280000)
+(setq read-process-output-max (* 1024 1024)) ;; 1mb
+(setq lsp-log-io nil)
+
+;; optionally
+(use-package lsp-ui
+  :hook (lsp-mode . lsp-ui-mode)
+  :commands lsp-ui-mode
+  )
+;; if you are helm user
+(use-package helm-lsp :commands helm-lsp-workspace-symbol)
+
+;;; Rocq
+(use-package proof-general
+  :init
+  (setq proof-splash-enable nil
+	proof-toolbar-enable nil
+	proof-disappearing-proofs nil
+	proof-general-debug nil)
+  :mode ("\\.v\\'" . coq-mode))
+(setq
+ coq-compiler "coqc"
+ coq-one-command-per-line nil
+ coq-prog-name "coqtop"
+ coq-script-indent nil
+ coq-unicode-tokens-enable nil)
+;; company
+(use-package company-coq
+  :hook (coq-mode . company-coq-mode))
+
 
 
 
@@ -355,6 +408,7 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(helm-minibuffer-history-key "M-p")
  '(package-selected-packages '(evil command-log-mode use-package)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
