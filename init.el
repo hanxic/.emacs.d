@@ -140,13 +140,6 @@
 
   (helm-projectile-on))
 
-(use-package helm-ag
-  :ensure t
-  :commands (helm-ag)
-  :config
-
-  (setq helm-ag-insert-at-point 'symbol))
-
 (use-package helm-rg
   :ensure t
   :commands (helm-rg)
@@ -712,7 +705,9 @@
   '(".aux" ".vo" ".cmo" ".cmx" ".cma" ".cmxa" ".cmi" ".cmxs" ".cmt" ".annot" ".byte" ".native"))
 
 ;; OCaml format
-(require 'ocamlformat)
+(use-package ocamlformat
+  :ensure t
+  )
 (add-hook 'tuareg-mode-hook (lambda ()
   (define-key tuareg-mode-map (kbd "C-M-<tab>") #'ocamlformat)))
 
@@ -930,18 +925,18 @@
 (use-package helm-lsp :commands helm-lsp-workspace-symbol)
 
 ;; ******** Rust ********
-(use-package rust-mode
-  :mode ("\\.rs\\'" . rust-mode))
-(use-package rustic
-  :after rust-mode
-  )
+;; (use-package rust-mode
+;;   :mode ("\\.rs\\'" . rust-mode))
+;; (use-package rustic
+;;   :after rust-mode
+;;   )
 
-(setq lsp-rust-analyzer-cargo-watch-command "clippy")
-;; These are optional configurations. See https://emacs-lsp.github.io/lsp-mode/page/lsp-rust-analyzer/#lsp-rust-analyzer-display-chaining-hints for a full list
-(setq lsp-rust-analyzer-display-lifetime-elision-hints-enable "skip_trivial")
-(setq lsp-rust-analyzer-display-chaining-hints t)
-(setq lsp-rust-analyzer-display-lifetime-elision-hints-use-parameter-names nil)
-(setq lsp-rust-analyzer-display-closure-return-type-hints t)
+;; (setq lsp-rust-analyzer-cargo-watch-command "clippy")
+;; ;; These are optional configurations. See https://emacs-lsp.github.io/lsp-mode/page/lsp-rust-analyzer/#lsp-rust-analyzer-display-chaining-hints for a full list
+;; (setq lsp-rust-analyzer-display-lifetime-elision-hints-enable "skip_trivial")
+;; (setq lsp-rust-analyzer-display-chaining-hints t)
+;; (setq lsp-rust-analyzer-display-lifetime-elision-hints-use-parameter-names nil)
+;; (setq lsp-rust-analyzer-display-closure-return-type-hints t)
 ;; (setq lsp-rust-analyzer-display-parameter-hints nil)
 ;; (setq lsp-rust-analyzer-display-reborrow-hints nil)
 
