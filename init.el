@@ -1,4 +1,6 @@
-(server-start)
+(require 'server)
+(unless (server-running-p)
+  (server-start))
 
 ;; Packeages that I want to install
 ;; use-package
@@ -75,7 +77,7 @@
 (scroll-bar-mode -1)    ; Disable visible scrollbar
 (tool-bar-mode -1)      ; Disable tool bar
 (tooltip-mode -1)       ; Disable tooltips
-(set-fringe-mode 3)     ; Give some breathing room
+(set-fringe-mode 7)     ; Give some breathing room
 (menu-bar-mode -1)      ; Disable the menu bar
 (save-place-mode 1)
 (setq save-place-file "~/.emacs.d/saveplace")
@@ -250,34 +252,7 @@
 ;; Evil Mode Line
 (setq evil-normal-state-tag   (propertize "[Normal]" 'face '((:background "green" :foreground "black")))
       evil-emacs-state-tag    (propertize "[Emacs]" 'face '((:background "orange" :foreground "black")))
-      evil-insert-state-tag   (propertize "[Insert]" 'face '((:background "red") :foreground "white"))
-      evil-motion-state-tag   (propertize "[Motion]" 'face '((:background "blue") :foreground "white"))
-      evil-visual-state-tag   (propertize "[Visual]" 'face '((:background "grey80" :foreground "black")))
-      evil-operator-state-tag (propertize "[Operator]" 'face '((:background "purple"))))
-
-;; evil commenter
-(use-package evil-nerd-commenter
-  :after evil
-  :bind ("M-;" . evilnc-comment-or-uncomment-lines))
-
-;;; Uniquify
-(require 'uniquify)
-
-;;; Spelling
-(setq ispell-program-name "aspell")
-(setq ispell-dictionary "english")
-(add-hook 'text-mode-hook 'flyspell-mode)
-
-;;; Checking
-(use-package flycheck
-  :ensure t
-  :config
-  (global-flycheck-mode)
-  )
-
-;;; Customization
-(defun hanxic/elisp-highlight-section ()
-  "Make comments starting with ';;;' appear larger."
+      evil-insert-state-tag   (prop' appear larger."
   (font-lock-add-keywords
    nil
    '((";;;.*$"                ;; regex: lines starting with ;;;
@@ -409,7 +384,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(helm-minibuffer-history-key "M-p")
- '(package-selected-packages '(evil command-log-mode use-package)))
+ '(package-selected-packages nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
