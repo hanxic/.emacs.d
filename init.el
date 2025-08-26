@@ -85,6 +85,15 @@
 (use-package command-log-mode
   :defer 10)
 
+;;; Self-defined functions
+(defun hanxic/indent-for-tab-command ()
+  "Run indent-for-tab-command but key point at the same column."
+  (interactive)
+  (let ((col (current-column)))
+    (indent-for-tab-command)
+    (move-to-column col))
+  )
+
 ;;; Helm
 (use-package helm
   :ensure t
@@ -212,6 +221,7 @@
   (define-key evil-insert-state-map (kbd "C-h") 'evil-delete-backward-char-and-join)
   (evil-global-set-key 'motion "j" 'evil-next-visual-line)
   (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
+  (evil-global-set-key 'normal (kbd "TAB") #'hanxic/indent-for-tab-command)
   (evil-set-initial-state 'message-buffer-mode 'normal)
   (evil-set-initial-state 'dashboard-mode 'normal)
   )
@@ -284,6 +294,11 @@
       0
       '(:inherit font-lock-comment-face :height 1.2 :weight bold) t))))
 (add-hook 'emacs-lisp-mode-hook 'hanxic/elisp-highlight-section)
+
+;;; Company
+(use-package company
+  :ensure t
+  :hook (afer-init . global-company-mode))
 
 ;;; Org mode
 
