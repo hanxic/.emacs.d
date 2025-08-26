@@ -262,7 +262,34 @@
 ;; Evil Mode Line
 (setq evil-normal-state-tag   (propertize "[Normal]" 'face '((:background "green" :foreground "black")))
       evil-emacs-state-tag    (propertize "[Emacs]" 'face '((:background "orange" :foreground "black")))
-      evil-insert-state-tag   (prop' appear larger."
+      evil-insert-state-tag   (propertize "[Insert]" 'face '((:background "red") :foreground "white"))
+      evil-motion-state-tag   (propertize "[Motion]" 'face '((:background "blue") :foreground "white"))
+      evil-visual-state-tag   (propertize "[Visual]" 'face '((:background "grey80" :foreground "black")))
+      evil-operator-state-tag (propertize "[Operator]" 'face '((:background "purple"))))
+
+;; evil commenter
+(use-package evil-nerd-commenter
+  :after evil
+  :bind ("M-;" . evilnc-comment-or-uncomment-lines))
+
+;;; Uniquify
+(require 'uniquify)
+
+;;; Spelling
+(setq ispell-program-name "aspell")
+(setq ispell-dictionary "english")
+(add-hook 'text-mode-hook 'flyspell-mode)
+
+;;; Checking
+(use-package flycheck
+  :ensure t
+  :config
+  (global-flycheck-mode)
+  )
+
+;;; Customization
+(defun hanxic/elisp-highlight-section ()
+  "Make comments starting with ';;;' appear larger."
   (font-lock-add-keywords
    nil
    '((";;;.*$"                ;; regex: lines starting with ;;;
