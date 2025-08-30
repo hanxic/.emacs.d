@@ -399,6 +399,7 @@
 ;; if you are helm user
 (use-package helm-lsp :commands helm-lsp-workspace-symbol)
 
+;;; Language-specific Configuration
 ;;; Rocq
 (use-package proof-general
   :init
@@ -417,6 +418,18 @@
 (use-package company-coq
   :hook (coq-mode . company-coq-mode))
 
+;;; Haskell
+(use-package haskell-mode
+  :mode ("\\.hs\\'" . haskell-mode)
+  :ensure t
+  :defer t)
+(use-package hlint-refactor
+  :after (haskell-mode)
+  :hook (hlint-refactor-mode . haskell-mode-hook))
+(use-package flycheck-haskell
+  :after (flycheck haskell-mode)) 
+(use-package lsp-haskell
+  :after (lsp-mode haskell-mode))
 
 
 
