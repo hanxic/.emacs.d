@@ -224,6 +224,7 @@
   (evil-global-set-key 'motion "j" 'evil-next-visual-line)
   (evil-global-set-key 'motion "k" 'evil-previous-visual-line)
   (evil-global-set-key 'normal (kbd "TAB") #'hanxic/indent-for-tab-command)
+  (evil-global-set-key 'visual (kbd "TAB") #'hanxic/indent-for-tab-command)
   (evil-set-initial-state 'message-buffer-mode 'normal)
   (evil-set-initial-state 'dashboard-mode 'normal)
   )
