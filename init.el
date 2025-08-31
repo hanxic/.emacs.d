@@ -431,6 +431,19 @@
 (use-package lsp-haskell
   :after (lsp-mode haskell-mode))
 
+;;; HTML, CSS, JavaScript
+(use-package web-mode
+  :ensure t
+  :mode
+  (("\\.html?\\'" . web-mode)
+   ("\\.phtml\\'" . web-mode)
+   ("\\.php\\'" . web-mode)
+   ("\\.tpl\\'" . web-mode)
+   ("\\.[agj]sp\\'" . web-mode)
+   ("\\.as[cp]x\\'" . web-mode)
+   ("\\.erb\\'" . web-mode)
+   ("\\.mustache\\'" . web-mode)
+   ("\\.djhtml\\'" . web-mode)))
 
 
 (custom-set-variables
