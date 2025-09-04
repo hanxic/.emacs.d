@@ -446,6 +446,12 @@
    ("\\.mustache\\'" . web-mode)
    ("\\.djhtml\\'" . web-mode)))
 
+;;; More Miscellaneous
+(setq-default tab-width 2)
+(setq-default indent-tabs-mode nil)
+(setq web-mode-markup-indent-offset 2)
+(setq web-mode-css-indent-offset 2)
+(setq web-mode-code-indent-offset 2)
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
