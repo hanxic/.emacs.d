@@ -1,7 +1,4 @@
-(require 'server)
-(unless (server-running-p)
-  (server-start))
-
+;;; Package -- summary
 ;; Packeages that I want to install
 ;; use-package
 ;; display line number (functionality)
@@ -28,6 +25,14 @@
 ;; lsp
 ;;
 
+;;; Commentary:
+
+;;; Code:
+(require 'server)
+(unless (server-running-p)
+  (server-start))
+
+
 (require 'package)
 (setq package-archives
       '(("melpa" . "https://melpa.org/packages/")
@@ -52,7 +57,7 @@
       delete-old-versions t
       kept-old-versions 1
       kept-new-versions 2
-      backup--by-copying t
+      backup-by-copying t
       version-control t
       )
 
@@ -61,7 +66,7 @@
 (dolist (mode '(org-mode-hook
 		term-mode-hook
 		eshell-mode-hook
-		shell-mode--hook))
+		shell-mode-hook))
   (add-hook mode (lambda () (display-line-numbers-mode 0))))
 (setq display-line-numbers-type 'visual)
 
@@ -70,7 +75,7 @@
 (add-hook 'prog-mode-hook #'display-fill-column-indicator-mode)
 (add-hook 'after-change-major-mode-hook
 	  (lambda ()
-	    (setq display--fill-column-indicator-column 80)))
+	    (setq display-fill-column-indicator-column 80)))
 
 ;;; Miscellaneous
 (global-hl-line-mode 1) ; highlight current line
@@ -277,8 +282,12 @@
 (require 'uniquify)
 
 ;;; Spelling
-(setq ispell-program-name "aspell")
-(setq ispell-dictionary "english")
+(use-package ispell
+  :config
+  (setq ispell-program-name "aspell")
+  (setq ispell-dictionary "english")
+  
+  )
 (add-hook 'text-mode-hook 'flyspell-mode)
 
 ;;; Checking
@@ -466,3 +475,6 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  )
+
+(provide 'init)
+;;; init.el ends here
