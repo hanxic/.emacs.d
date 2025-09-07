@@ -462,6 +462,37 @@
 (setq web-mode-css-indent-offset 2)
 (setq web-mode-code-indent-offset 2)
 
+;;; More Customization
+(defun hanxic/run-make (&rest _args)
+  "Run `make` on saving a LaTeX file and switch to the compilation buffer."
+  (when (and buffer-file-name
+             (derived-mode-p 'latex-mode 'LaTeX-mode))
+    (let ((default-directory (file-name-directory buffer-file-name)))
+      (message "Running make for %s..." buffer-file-name)
+      (compile "make -k")
+      ;; Delay slightly to allow Preview to grab focus
+      (run-at-time 2 nil
+                   (lambda ()
+                     ;; Bring Emacs to front if on macOS NS
+                     (when (fboundp 'ns-do-applescript)
+                       (ns-do-applescript "tell application \"Emacs\" to activate")
+                       (message "AppleScript called to bring Emacs to front.")
+                       (let ((comp-buffer (get-buffer "*compilation*"))
+                             (comp-window (get-buffer-window "*compilation*" t)))
+                         (when (and comp-buffer comp-window)
+                           (with-current-buffer comp-buffer
+                             (goto-char (point-max))
+                             (forward-line -1)
+                             (if (looking-at ".* finished.*")
+                                 (delete-window comp-window)
+                               (select-window comp-window)
+                               (goto-char (point-max))
+                           )))
+                     ;; Switch to the window showing *compilation*
+                     )))))))
+
+(add-hook 'after-save-hook #'hanxic/run-make)
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
