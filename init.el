@@ -313,9 +313,31 @@
   :hook (afer-init . global-company-mode))
 
 ;;; Org mode
-
+;; (add-hook 'org-mode-hook #'turn-on-auto-fill)
+;; (setq-default fill-column 80)
 (use-package org
+  :init
+  (setq-default fill-column 80)
+  :hook (org-mode . turn-on-auto-fill)
+  :custom
+  (org-highlight-latex-and-related '(latex))
+  (org-use-sub-superscripts '{})
+  (org-export-with-LaTeX-fragments t)
+  (org-latex-create formula-image-program 'dvipng)
+  :config
+  (setq org-format-latex-options
+      '(:foreground "Black"
+        :background "White"
+        :scale 1.2           ; increase this to make math bigger
+        :html-foreground "Black"
+        :html-background "White"
+        :html-scale 1.5
+        :matchers ("begin" "$1" "$" "\\(" "\\[")))
+  (use-package org-fragtog
+    :ensure t
+    :hook (org-mode . org-fragtog-mode))
   )
+
 
 ;;; Latex
 (use-package auctex
@@ -455,6 +477,7 @@
    ("\\.mustache\\'" . web-mode)
    ("\\.djhtml\\'" . web-mode)))
 
+
 ;;; More Miscellaneous
 (setq-default tab-width 2)
 (setq-default indent-tabs-mode nil)
@@ -499,7 +522,12 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(helm-minibuffer-history-key "M-p")
- '(package-selected-packages nil))
+ '(package-selected-packages
+   '(command-log-mode company-auctex company-coq ef-themes evil-collection
+                      evil-nerd-commenter flycheck-haskell helm-lsp
+                      helm-projectile helm-rg helpful hlint-refactor lsp-haskell
+                      lsp-ui magit nerd-icons org-fragtog proof-general
+                      telephone-line web-mode yasnippet-snippets)))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
