@@ -524,6 +524,22 @@
 
 (add-hook 'after-save-hook #'hanxic/run-make)
 
+;;; Copilot
+(add-to-list 'exec-path "/opt/homebrew/bin")
+(setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
+
+(use-package copilot
+  :vc (:url "https://github.com/copilot-emacs/copilot.el"
+            :rev :newest
+            :branch "main")
+  :hook
+  (prog-mode-hook . copilot-mode)
+  :config
+  (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
+  (define-key copilot-completion-map (kbd "TAB") 'copilot-accept-completion))
+
+
+
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
