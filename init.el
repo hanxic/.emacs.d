@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t; -*-
+
 ;;; Package -- summary
 ;; Packeages that I want to install
 ;; use-package
@@ -28,6 +30,7 @@
 ;;; Commentary:
 
 ;;; Code:
+
 (require 'server)
 (unless (server-running-p)
   (server-start))
@@ -494,36 +497,137 @@
 (setq web-mode-code-indent-offset 2)
 
 ;;; More Customization
-(defun hanxic/latex-run-make (&rest _args)
-  "Run `make` on saving a LaTeX file and switch to the compilation buffer."
+;; (defun hanxic/latex-run-make (&rest _args)
+;;   "Run `make` on saving a LaTeX file and switch to the compilation buffer."
+;;   (interactive)
+;;   (when (and buffer-file-name
+;;              (derived-mode-p 'latex-mode 'LaTeX-mode))
+;;     (let ((default-directory (file-name-directory buffer-file-name)))
+;;       (message "Running make for %s..." buffer-file-name)
+;;       (compile "make -k")
+;;       ;; Delay slightly to allow Preview to grab focus
+;;       (run-at-time 2 nil
+;;                    (lambda ()
+;;                      ;; Bring Emacs to front if on macOS NS
+;;                      (when (fboundp 'ns-do-applescript)
+;;                        (ns-do-applescript "tell application \"Emacs\" to activate")
+;;                        (message "AppleScript called to bring Emacs to front.")
+;;                        (let ((comp-buffer (get-buffer "*compilation*"))
+;;                              (comp-window (get-buffer-window "*compilation*" t)))
+;;                          (when (and comp-buffer comp-window)
+;;                            (with-current-buffer comp-buffer
+;;                              (goto-char (point-max))
+;;                              (forward-line -1)
+;;                              (if (looking-at ".* finished.*")
+;;                                  (delete-window comp-window)
+;;                                (select-window comp-window)
+;;                                (goto-char (point-max))
+;;                            )))
+;;                      ;; Switch to the window showing *compilation*
+;;                      )))))))
+(setq compilation-scroll-output t)
+
+(defun hanxic/compile-with-callbacks (command on-success on-failure)
+  "Run COMMAND with `compile`.
+   If compilation succeeds, call ON-SUCCESS (a no-arg function).
+   If compilation exits abnormally, call ON-FAILURE (a no-arg function).
+   If compilation was killed, do nothing."
+  (let ((done nil)) ;; guard so callbacks fire only once
+    (cl-labels
+        ((handler (buf msg)
+           (unless done
+             (setq done t)
+             (remove-hook 'compilation-finish-functions #'handler)
+             (cond
+              ((string-match "finished" msg)
+               (funcall on-success))
+              ((string-match "killed" msg)
+               (message "Compilation was killed; ignoring."))
+              (t
+               (funcall on-failure))))))
+      ;; add-hook must be inside cl-labels
+      (add-hook 'compilation-finish-functions #'handler)
+      (compile command))))
+
+;; (hanxic/compile-with-callbacks
+;;  "sleep 100"
+;;  (lambda () (message "Success!"))
+;;  (lambda () (message "Failure!")))
+
+;; (hanxic/compile-with-callbacks
+;;  "false"
+;;  (lambda () (message "Success!"))
+;;  (lambda () (message "Failure!")))
+
+(defun hanxic/funcall-after-delay-focus (seconds on-focus)
+  "Wait SECONDS, then switch to *compilation* and kill it."
+  (run-at-time seconds nil
+               (lambda ()
+                 (when (fboundp 'ns-do-applescript)
+                   (ns-do-applescript "tell application \"Emacs\" to activate")
+                   (message "AppleScript called to bring Emacs to front.")
+                   (funcall on-focus)))))
+
+(defun hanxic/invoke-funcall-window (windowname on-focus)
+  "get the window from `WINDOWNAME`, then call on-focus"
+  (let ((window (get-buffer-window windowname)))
+    (when (window-live-p window)
+      (funcall on-focus window))))
+
+
+;; (hanxic/invoke-funcall-window "*scratch*" #'delete-window)
+
+(defun hanxic/suffix-conversion (filename suffix)
+  "Return the PDF filename corresponding to the LaTeX FILENAME."
+  (concat (file-name-sans-extension filename) suffix))
+
+(defun hanxic/latex-make (&rest _args)
+  "Run `make` on saving a LaTeX file, or normal `latexmk`, in overleaf style."
   (interactive)
   (when (and buffer-file-name
              (derived-mode-p 'latex-mode 'LaTeX-mode))
-    (let ((default-directory (file-name-directory buffer-file-name)))
+    (let ((default-directory (file-name-directory buffer-file-name))
+          (make-cmd
+           (format
+            "make -k && open %s"
+            (hanxic/suffix-conversion buffer-file-name ".pdf")))
+          (latexmk-cmd
+           (format
+            "latexmk -pdf && open %s"
+            (hanxic/suffix-conversion buffer-file-name ".pdf"))))
       (message "Running make for %s..." buffer-file-name)
-      (compile "make -k")
-      ;; Delay slightly to allow Preview to grab focus
-      (run-at-time 2 nil
-                   (lambda ()
-                     ;; Bring Emacs to front if on macOS NS
-                     (when (fboundp 'ns-do-applescript)
-                       (ns-do-applescript "tell application \"Emacs\" to activate")
-                       (message "AppleScript called to bring Emacs to front.")
-                       (let ((comp-buffer (get-buffer "*compilation*"))
-                             (comp-window (get-buffer-window "*compilation*" t)))
-                         (when (and comp-buffer comp-window)
-                           (with-current-buffer comp-buffer
-                             (goto-char (point-max))
-                             (forward-line -1)
-                             (if (looking-at ".* finished.*")
-                                 (delete-window comp-window)
-                               (select-window comp-window)
-                               (goto-char (point-max))
-                           )))
-                     ;; Switch to the window showing *compilation*
-                     )))))))
 
-(add-hook 'after-save-hook #'hanxic/latex-run-make)
+      ;; Step 1: run make
+      (hanxic/compile-with-callbacks
+       ;; "make -k"
+       make-cmd
+       ;; make success
+       (lambda ()
+         (hanxic/funcall-after-delay-focus
+          1
+          (lambda ()
+            (hanxic/invoke-funcall-window "*compilation*" #'delete-window))))
+       ;; make failure
+       (lambda ()
+         ;; Step 2: run latexmk
+         (message "Make failed, running latexmk...")
+         (hanxic/compile-with-callbacks
+          ;; "latexmk -pdf"
+          latexmk-cmd
+          ;; latexmk success
+          (lambda ()
+            (hanxic/funcall-after-delay-focus
+             1
+             (lambda ()
+               (hanxic/invoke-funcall-window "*compilation*" #'delete-window))))
+          ;; latexmk failure
+          (lambda ()
+            (hanxic/funcall-after-delay-focus
+             1
+             (lambda ()
+               (hanxic/invoke-funcall-window "*compilation*" #'select-window))))))))))
+
+(add-hook 'after-save-hook #'hanxic/latex-make)
 
 ;;; Copilot
 (add-to-list 'exec-path "/opt/homebrew/bin")
