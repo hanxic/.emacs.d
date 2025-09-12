@@ -301,9 +301,9 @@
 (use-package undo-fu
   :ensure t
   :config
-  (global-unset-key (kbd "C-z"))
-  (global-set-key (kbd "C-z")   'undo-fu-only-undo)
-  (global-set-key (kbd "C-S-z") 'undo-fu-only-redo))
+  (global-unset-key (kbd "s-z"))
+  (global-set-key (kbd "s-z")   'undo-fu-only-undo)
+  (global-set-key (kbd "s-Z") 'undo-fu-only-redo))
 
 ;;; Customization
 (defun hanxic/elisp-highlight-section ()
@@ -494,8 +494,9 @@
 (setq web-mode-code-indent-offset 2)
 
 ;;; More Customization
-(defun hanxic/run-make (&rest _args)
+(defun hanxic/latex-run-make (&rest _args)
   "Run `make` on saving a LaTeX file and switch to the compilation buffer."
+  (interactive)
   (when (and buffer-file-name
              (derived-mode-p 'latex-mode 'LaTeX-mode))
     (let ((default-directory (file-name-directory buffer-file-name)))
@@ -522,7 +523,7 @@
                      ;; Switch to the window showing *compilation*
                      )))))))
 
-(add-hook 'after-save-hook #'hanxic/run-make)
+(add-hook 'after-save-hook #'hanxic/latex-run-make)
 
 ;;; Copilot
 (add-to-list 'exec-path "/opt/homebrew/bin")
@@ -532,11 +533,10 @@
   :vc (:url "https://github.com/copilot-emacs/copilot.el"
             :rev :newest
             :branch "main")
-  :hook
-  (prog-mode-hook . copilot-mode)
+  :defer t
   :config
-  (define-key copilot-completion-map (kbd "<tab>") 'copilot-accept-completion)
-  (define-key copilot-completion-map (kbd "TAB") 'copilot-accept-completion))
+  (define-key copilot-completion-map (kbd "C-<tab>") 'copilot-accept-completion)
+  (define-key copilot-completion-map (kbd "C-TAB") 'copilot-accept-completion))
 
 
 
