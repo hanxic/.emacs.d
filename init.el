@@ -627,7 +627,44 @@
              (lambda ()
                (hanxic/invoke-funcall-window "*compilation*" #'select-window))))))))))
 
-(add-hook 'after-save-hook #'hanxic/latex-make)
+(defvar latex-save-mode--default-enabled t
+  "Whether `latex-save-mode` shouldstart enabled the first time in a LaTeX buffer.
+   This variable tracks the user's choice after the first toggle.")
+
+;;;###autoload
+(define-minor-mode latex-save-mode
+  "Toggle Latex Save Mode.
+   When enabled, run latex-make on saving LaTeX files.
+   Only valid in LaTeX buffers."
+  :lighter "LaTeX-Save"
+  :global nil
+  (if latex-save-mode
+      ;; ON Branch
+      (progn
+        (message "latex-save-mode enabled")
+        (add-hook 'after-save-hook #'hanxic/latex-make))
+    ;; OFF branch
+    (progn
+      (message "latex-save-mode disabled")
+      (remove-hook 'after-save-hook #'hanxic/latex-make))))
+
+(defun latex-save-mode--auto-enable ()
+  "Enable or respect `latex-save-mode` in LaTeX buffers."
+  (when (derived-mode-p 'latex-mode 'LaTeX-mode)
+    ;; If the mode hasn't been explicitly toggled, enable it by default
+    (unless (bound-and-true-p latex-save-mode)
+      (when latex-save-mode--default-enabled
+        (latex-save-mode 1)))))
+
+;; Hook into LaTeX buffers
+(add-hook 'latex-mode-hook #'latex-save-mode--auto-enable)
+(add-hook 'LaTeX-mode-hook #'latex-save-mode--auto-enable)
+
+;; Track user choice (so toggling persists during the session)
+(defun latex-save-mode--remember-choice ()
+  (setq latex-save-mode--default-enabled latex-save-mode))
+
+(add-hook 'latex-save-mode-hook #'latex-save-mode--remember-choice)
 
 ;;; Copilot
 (add-to-list 'exec-path "/opt/homebrew/bin")
