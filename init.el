@@ -506,6 +506,22 @@
    ("\\.mustache\\'" . web-mode)
    ("\\.djhtml\\'" . web-mode)))
 
+;;; Lean
+;; lean4-mode require Dash
+(use-package dash
+  :ensure t)
+(use-package lean4-mode
+  :ensure t
+  :commands lean4-mode
+  :vc (:url "https://github.com/leanprover-community/lean4-mode.git"
+       :rev :last-release
+       ;; Or, if you prefer the bleeding edge version of Lean4-Mode:
+       ;; :rev :newest
+       )
+  :mode ("\\.lean\\'" . lean4-mode)
+  :config
+  (setq lean4-lsp-file-watch-ignored
+        '(".git" "_target" ".lake" "build")))
 
 ;;; More Miscellaneous
 (setq-default tab-width 2)
