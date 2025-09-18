@@ -164,8 +164,6 @@
   )
 
 ;;; Icons
-;; (use-package all-the-icons
-;;   :if (display-graphic-p))
 (use-package nerd-icons
   ;; :custom
   ;; The Nerd Font you want to use in GUI
@@ -219,6 +217,7 @@
          ("C-x C-g" . magit-status)))
 
 ;;; Evil Mode
+;;;; Evil
 (use-package evil
   :init
   (setq evil-want-integration t
@@ -293,7 +292,7 @@
   )
 (add-hook 'text-mode-hook 'flyspell-mode)
 
-;;; Checking
+;; ;;; Checking
 (use-package flycheck
   :ensure t
   :config
@@ -311,12 +310,15 @@
 ;;; Customization
 (defun hanxic/elisp-highlight-section ()
   "Make comments starting with ';;;' appear larger."
-  (font-lock-add-keywords
+(font-lock-add-keywords
    nil
-   '((";;;.*$"                ;; regex: lines starting with ;;;
-      0
-      '(:inherit font-lock-comment-face :height 1.2 :weight bold) t))))
+   '((";;;\\([^;].*\\)"   ;; ;;;
+      1 '(:weight bold :height 1.3 :foreground "Orange") t)
+     (";;;;\\([^;].*\\)"  ;; ;;;;
+      1 '(:weight bold :height 1.1 :foreground "LightSkyBlue") t))))
 (add-hook 'emacs-lisp-mode-hook 'hanxic/elisp-highlight-section)
+
+(set-face-attribute 'default nil :font "Iosevka-12")
 
 ;;; Company
 (use-package company
@@ -364,7 +366,6 @@
 (use-package tex 
   :ensure auctex
   :defer auctex
-  :config
   ) 
 
 (add-hook 'LaTeX-mode-hook 'flyspell-mode)
@@ -414,7 +415,7 @@
                           (cons "\\(" "\\)"))))
 (setq LaTeX-includegraphics-read-file 'LaTeX-includegraphics-read-file-relative)
 
-;;; LSP mode
+;; ;;; LSP mode
 (use-package lsp-mode
   :init
   ;; set prefix for lsp-command-keymap (few alternatives - "C-l", "C-c l")
@@ -426,18 +427,30 @@
   :commands lsp
   :custom
   (lsp-eldoc-render-all t)
-  (lsp-idle-delay 0.6)
+  (lsp-idle-delay 3)
   (lsp-inlay-hint-enable t)
   )
+(defun hanxic/cleanup-lsp ()
+  "Remove all the workspace folders from LSP"
+  (interactive)
+  (let ((folders (lsp-session-folders (lsp-session))))
+    (while folders
+      (lsp-workspace-folders-remove (car folders))
+      (setq folders (cdr folders)))))
 
 (setq gc-cons-threshold 1280000)
 (setq read-process-output-max (* 1024 1024)) ;; 1mb
-(setq lsp-log-io nil)
+(setq lsp-log-io t)
 
 ;; optionally
 (use-package lsp-ui
+  :ensure t
   :hook (lsp-mode . lsp-ui-mode)
   :commands lsp-ui-mode
+  :config
+  (setq lsp-ui-sideline-enable t
+        lsp-ui-sideline-show-hover t
+        lsp-ui-sideline-show-code-actions t)
   )
 ;; if you are helm user
 (use-package helm-lsp :commands helm-lsp-workspace-symbol)
@@ -447,10 +460,11 @@
 (use-package proof-general
   :init
   (setq proof-splash-enable nil
-	proof-toolbar-enable nil
-	proof-disappearing-proofs nil
-	proof-general-debug nil)
+	      proof-toolbar-enable nil
+	      proof-disappearing-proofs nil
+	      proof-general-debug nil)
   :mode ("\\.v\\'" . coq-mode))
+
 (setq
  coq-compiler "coqc"
  coq-one-command-per-line nil
@@ -461,18 +475,22 @@
 (use-package company-coq
   :hook (coq-mode . company-coq-mode))
 
-;;; Haskell
+;; ;;; Haskell
 (use-package haskell-mode
   :mode ("\\.hs\\'" . haskell-mode)
   :ensure t
-  :defer t)
+  :defer t
+  :hook
+  (haskell-mode . interactive-haskell-mode))
 (use-package hlint-refactor
   :after (haskell-mode)
   :hook (hlint-refactor-mode . haskell-mode-hook))
 (use-package flycheck-haskell
   :after (flycheck haskell-mode)) 
 (use-package lsp-haskell
-  :after (lsp-mode haskell-mode))
+  :after (lsp-mode haskell-mode)
+  :config
+  (setq lsp-haskell-server-path "~/.ghcup/bin/haskell-language-server-wrapper"))
 
 ;;; HTML, CSS, JavaScript
 (use-package web-mode
@@ -497,34 +515,6 @@
 (setq web-mode-code-indent-offset 2)
 
 ;;; More Customization
-;; (defun hanxic/latex-run-make (&rest _args)
-;;   "Run `make` on saving a LaTeX file and switch to the compilation buffer."
-;;   (interactive)
-;;   (when (and buffer-file-name
-;;              (derived-mode-p 'latex-mode 'LaTeX-mode))
-;;     (let ((default-directory (file-name-directory buffer-file-name)))
-;;       (message "Running make for %s..." buffer-file-name)
-;;       (compile "make -k")
-;;       ;; Delay slightly to allow Preview to grab focus
-;;       (run-at-time 2 nil
-;;                    (lambda ()
-;;                      ;; Bring Emacs to front if on macOS NS
-;;                      (when (fboundp 'ns-do-applescript)
-;;                        (ns-do-applescript "tell application \"Emacs\" to activate")
-;;                        (message "AppleScript called to bring Emacs to front.")
-;;                        (let ((comp-buffer (get-buffer "*compilation*"))
-;;                              (comp-window (get-buffer-window "*compilation*" t)))
-;;                          (when (and comp-buffer comp-window)
-;;                            (with-current-buffer comp-buffer
-;;                              (goto-char (point-max))
-;;                              (forward-line -1)
-;;                              (if (looking-at ".* finished.*")
-;;                                  (delete-window comp-window)
-;;                                (select-window comp-window)
-;;                                (goto-char (point-max))
-;;                            )))
-;;                      ;; Switch to the window showing *compilation*
-;;                      )))))))
 (setq compilation-scroll-output t)
 
 (defun hanxic/compile-with-callbacks (command on-success on-failure)
@@ -548,16 +538,6 @@
       ;; add-hook must be inside cl-labels
       (add-hook 'compilation-finish-functions #'handler)
       (compile command))))
-
-;; (hanxic/compile-with-callbacks
-;;  "sleep 100"
-;;  (lambda () (message "Success!"))
-;;  (lambda () (message "Failure!")))
-
-;; (hanxic/compile-with-callbacks
-;;  "false"
-;;  (lambda () (message "Success!"))
-;;  (lambda () (message "Failure!")))
 
 (defun hanxic/funcall-after-delay-focus (seconds on-focus)
   "Wait SECONDS, then switch to *compilation* and kill it."
@@ -687,12 +667,7 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(helm-minibuffer-history-key "M-p")
- '(package-selected-packages
-   '(command-log-mode company-auctex company-coq ef-themes evil-collection
-                      evil-nerd-commenter flycheck-haskell helm-lsp
-                      helm-projectile helm-rg helpful hlint-refactor lsp-haskell
-                      lsp-ui magit nerd-icons org-fragtog proof-general
-                      telephone-line web-mode yasnippet-snippets)))
+ '(package-selected-packages nil))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
