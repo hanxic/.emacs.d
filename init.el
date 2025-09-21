@@ -117,12 +117,13 @@
 	 ("C-M-j" . helm-buffers-list))
   :defer 1
   :config
-
   ;(require 'helm-config)
   (helm-mode 1)
   (helm-autoresize-mode 1)
+  (require 'helm-command)
   :custom
-  (helm-M-x-show-short-doc t))
+  (helm-M-x-show-short-doc t)
+  (helm-M-x-requires-pattern 0))
 
 ;;; Projectile
 
@@ -297,7 +298,9 @@
   :ensure t
   :config
   (global-flycheck-mode)
-  )
+  :bind (:map flycheck-mode-map
+              ("C-c C-j n" . flycheck-next-error)
+              ("C-c C-j p" . flycheck-previous-error)))
 
 ;;; Undo-fu
 (use-package undo-fu
@@ -429,6 +432,19 @@
   (lsp-eldoc-render-all t)
   (lsp-idle-delay 3)
   (lsp-inlay-hint-enable t)
+  :config
+  (setq lsp-file-watch-ignored-directories
+        '("[/\\\\]\\.git$"
+          "[/\\\\]\\.github$"
+          "[/\\\\]node_modules$"
+          "[/\\\\]_target$"
+          "[/\\\\]build$"
+          "[/\\\\]\\.direnv$"
+          "[/\\\\]\\.devcontainer$"
+          "[/\\\\]\\.docker$"
+          "[/\\\\]\\.lake$"
+          "[/\\\\]\\.vscode$"
+        ))
   )
 (defun hanxic/cleanup-lsp ()
   "Remove all the workspace folders from LSP"
@@ -506,22 +522,212 @@
    ("\\.mustache\\'" . web-mode)
    ("\\.djhtml\\'" . web-mode)))
 
+;;; OCaml
+;; ## added by OPAM user-setup for emacs / base ## 56ab50dc8996d2bb95e7856a6eddb17b ## you can edit, but keep this line
+(require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
+;; ## end of OPAM user-setup addition for emacs / base ## keep this line
+;;;
+;;;; ocaml configuration
+;; add opam emacs directory to the load-path
+(setq opam-dir (substring (shell-command-to-string "opam config var prefix 2> /dev/null") 0 -1))
+(setq opam-share (substring (shell-command-to-string "opam config var share 2> /dev/null") 0 -1))
+
+(add-to-list 'load-path (concat opam-share "/emacs/site-lisp"))
+
+
+(autoload 'tuareg-mode "tuareg" "Major mode for editing Caml code" t)
+(autoload 'camldebug "camldebug" "Run the Caml debugger" t)
+
+;; make OCaml-generated files invisible to filename completion
+(mapc #'(lambda (ext) (add-to-list 'completion-ignored-extensions ext))
+  '(".aux" ".vo" ".cmo" ".cmx" ".cma" ".cmxa" ".cmi" ".cmxs" ".cmt" ".annot" ".byte" ".native"))
+
+;; OCaml format
+(use-package ocamlformat
+  :ensure t
+  )
+(add-hook 'tuareg-mode-hook (lambda ()
+  (define-key tuareg-mode-map (kbd "C-M-<tab>") #'ocamlformat)))
+
+(defun chomp (str)
+      "Chomp leading and tailing whitespace from STR."
+      (replace-regexp-in-string (rx (or (: bos (* (any " \t\n")))
+                                        (: (* (any " \t\n")) eos)))
+                                ""
+                                str))
+
+(defun pad-to-column (col pad)
+  "Adds the character 'pad' from the current point to column 'col'."
+  (interactive)
+  (let (len)
+    (setq len (- col (current-column)))
+    (dotimes (i len)
+      (insert pad))))
+  
+  
+(defun dashes ()
+  "Adds dashes from the current point to column 77"
+
+  (interactive)
+  (pad-to-column 77 "-"))
+
+(defun ocaml-close-comment ()
+  "Pads spaces and then inserts '*)' ending on column 80."
+
+  (interactive)
+  (pad-to-column 77 " ")
+  (insert " *)"))
+                                                                            
+
+(defun ocaml-insert-header-string (str)
+  "Inserts an ocaml comment header"
+  (interactive)
+  (insert "(* ")
+  (insert (chomp str))
+  (insert " ")
+  (dashes)
+  (insert " *)"))
+
+
+;; nice comment formating for Ocaml
+(defun ocaml-comment-header ()
+  "Makes the current line into an beautiful OCaml comment header."
+
+  (interactive)
+  (let (p1 p2 theLine newLine)
+    (setq p1 (line-beginning-position))
+    (setq p2 (line-end-position))
+    (setq theLine (buffer-substring-no-properties p1 p2))
+    (setq newLine 
+	  (with-temp-buffer
+	    (insert theLine)
+	    (goto-char (point-min))
+	    (if (re-search-forward "^ *(\\* *\\([^-]*\\)-* *\\*) *" (point-max) t)
+		(let (comment)
+		  (setq comment (match-string 1))
+		  (erase-buffer)
+		  (ocaml-insert-header-string comment))
+	      (progn
+		(erase-buffer)
+		(ocaml-insert-header-string theLine)))
+	    (buffer-string)
+	    ))
+    (delete-region p1 p2)
+    (insert newLine)
+    (forward-line)
+    (beginning-of-line)
+    )
+)
+
+
+
+(defun ocaml-comment-footer ()
+  "Adds a trailing '*)' (if needed) padded to column 80."
+
+  (interactive)
+  (let (p1 p2 theLine newLine)
+    (setq p1 (line-beginning-position))
+    (setq p2 (line-end-position))
+    (setq theLine (buffer-substring-no-properties p1 p2))
+    (setq newLine
+	  (with-temp-buffer
+	    (insert theLine)
+	    (goto-char (point-min))
+	    (if (re-search-forward "\\*)" (point-max) t)
+		(progn
+		  (forward-char -2)
+		  (pad-to-column 78 " "))
+	      (progn
+		(end-of-line)
+		(ocaml-close-comment)))
+	    (buffer-string)
+	    ))
+    (delete-region p1 p2)
+    (insert newLine)
+    (forward-line)
+    (beginning-of-line)
+    )
+)
+
+;; Major mode for OCaml programming
+(use-package tuareg
+  ;; :ensure t
+  :mode (("\\.ocamlinit\\'" . tuareg-mode)))
+
+
+;; Major mode for editing Dune project files
+(use-package dune
+  :ensure t)
+
+;; Merlin provides advanced IDE features
+(use-package merlin
+  ;; :after company
+  :ensure t
+  :config
+  (add-hook 'tuareg-mode-hook #'merlin-mode)
+  (add-hook 'merlin-mode-hook #'company-mode)
+  ;; we're using flycheck instead
+  (setq merlin-error-after-save nil)
+  (custom-set-faces
+ '(merlin-type-face ((t (:background "#46484f"))))
+ ))
+(add-to-list 'auto-mode-alist '("\\.mlg$"      . tuareg-mode) t)
+;; (custom-set-faces
+;;  '(merlin-type-face ((t (:background "#46484f"))))
+;;  :when (eq 'dark (frame-parameter nil 'background-mode)))
+
+;; (use-package merlin-eldoc
+;;   :ensure t
+;;   :hook ((tuareg-mode) . merlin-eldoc-setup))
+
+;; This uses Merlin internally
+(use-package flycheck-ocaml
+  :ensure t
+  :config
+  (add-hook 'tuareg-mode-hook
+            (lambda ()
+              ;; disable Merlin's own error checking
+              (setq-local merlin-error-after-save nil)
+              ;; enable Flycheck checker
+             (flycheck-ocaml-setup))))
+
+(let ((opam-share (ignore-errors (car (process-lines "opam" "var" "share")))))
+  (when (and opam-share (file-directory-p opam-share))
+    (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))))
+(require 'caml)
+;; automatically activate caml-mode when eidting .ml, .mli, .mly, .mll
+(add-to-list 'auto-mode-alist '("\\.ml[yl]+$" . tuareg-menhir-mode))
+
+
 ;;; Lean
 ;; lean4-mode require Dash
 (use-package dash
   :ensure t)
-(use-package lean4-mode
-  :ensure t
-  :commands lean4-mode
-  :vc (:url "https://github.com/leanprover-community/lean4-mode.git"
-       :rev :last-release
-       ;; Or, if you prefer the bleeding edge version of Lean4-Mode:
-       ;; :rev :newest
-       )
-  :mode ("\\.lean\\'" . lean4-mode)
-  :config
-  (setq lean4-lsp-file-watch-ignored
-        '(".git" "_target" ".lake" "build")))
+;; (use-package lean4-mode
+;;   :ensure t
+;;   :commands lean4-mode
+;;   :vc (:url "https://github.com/leanprover-community/lean4-mode.git"
+;;        :rev :last-release
+;;        ;; Or, if you prefer the bleeding edge version of Lean4-Mode:
+;;        ;; :rev :newest
+;;        )
+;;   :mode ("\\.lean\\'" . lean4-mode)
+;;   :config
+;;   (setq lean4-lsp-file-watch-ignored
+;;         '(".git" "_target" ".lake" "build"))
+;;   :bind
+;;   (:map lean4-mode-map
+;;         ("C-c C-d" . lsp-describe-thing-at-point)))
+
+(add-to-list 'load-path "~/projects/lean-self/lean4-mode/")
+(require 'lean4-mode)
+(add-to-list 'auto-mode-alist '("\\.lean\\'" . lean4-mode))
+(require 'lean4-ghost)
+
+;; (add-hook 'lean4-mode-hook
+;;           (lambda ()
+;;             (require 'lean4-ghost)
+;;             (lean4-ghost-mode 1)))
 
 ;;; More Miscellaneous
 (setq-default tab-width 2)
@@ -530,7 +736,21 @@
 (setq web-mode-css-indent-offset 2)
 (setq web-mode-code-indent-offset 2)
 
+;;; Copilot
+(add-to-list 'exec-path "/opt/homebrew/bin")
+(setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
+
+(use-package copilot
+  :vc (:url "https://github.com/copilot-emacs/copilot.el"
+            :rev :newest
+            :branch "main")
+  :defer t
+  :config
+  (define-key copilot-completion-map (kbd "C-<tab>") 'copilot-accept-completion)
+  (define-key copilot-completion-map (kbd "C-TAB") 'copilot-accept-completion))
+
 ;;; More Customization
+;;;; Overleaf functionality
 (setq compilation-scroll-output t)
 
 (defun hanxic/compile-with-callbacks (command on-success on-failure)
@@ -662,18 +882,13 @@
 
 (add-hook 'latex-save-mode-hook #'latex-save-mode--remember-choice)
 
-;;; Copilot
-(add-to-list 'exec-path "/opt/homebrew/bin")
-(setenv "PATH" (concat "/opt/homebrew/bin:" (getenv "PATH")))
+;;;; Treesit
+;; (require 'treesit)
+;; (add-to-list 'treesit-language-source-alist
+;;              '(lean "https://github.com/Julian/tree-sitter-lean.git"))
 
-(use-package copilot
-  :vc (:url "https://github.com/copilot-emacs/copilot.el"
-            :rev :newest
-            :branch "main")
-  :defer t
-  :config
-  (define-key copilot-completion-map (kbd "C-<tab>") 'copilot-accept-completion)
-  (define-key copilot-completion-map (kbd "C-TAB") 'copilot-accept-completion))
+;;;; lean-walker
+
 
 
 
@@ -683,13 +898,14 @@
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(helm-minibuffer-history-key "M-p")
- '(package-selected-packages nil))
+ '(package-selected-packages nil)
+ '(warning-suppress-log-types '((lsp-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- )
+ '(merlin-type-face ((t (:background "#46484f")))))
 
 (provide 'init)
 ;;; init.el ends here
