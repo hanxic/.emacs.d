@@ -237,20 +237,56 @@
   (evil-set-initial-state 'dashboard-mode 'normal)
   )
 (defun hanxic/evil-visual-indent-right-1 ()
-  "Indent selected region by 1 space to the right."
+  "Indent selected region by 1 space to the right, keeping cursor at same column."
   (interactive)
   (when (use-region-p)
-    (indent-rigidly (region-beginning) (region-end) 1)
-    (evil-visual-restore)))
+    ;; record line and column of point and mark
+    (let* ((point-line (line-number-at-pos (point)))
+           (point-col  (current-column))
+           (mark-line  (line-number-at-pos (mark)))
+           (mark-col   (save-excursion (goto-char (mark)) (current-column))))
+      ;; indent region
+      (indent-rigidly (region-beginning) (region-end) 1)
+      ;; restore point
+      (goto-char (point-min))
+      (forward-line (1- point-line))
+      (move-to-column (+ point-col 1))
+      ;; restore mark
+      (set-mark (point-min))
+      (forward-line (1- mark-line))
+      (move-to-column (+ mark-col 1))
+      (evil-visual-restore))))
 
 (defun hanxic/evil-visual-indent-left-1 ()
-  "Indent selected region by 1 space to the left."
+  "Indent selected region by 1 space to the left, keeping cursor at same column."
   (interactive)
   (when (use-region-p)
-    (indent-rigidly (region-beginning) (region-end) -1)
-    (evil-visual-restore)))
-(define-key evil-visual-state-map (kbd "S-<right>") 'hanxic/evil-visual-indent-right-1)
-(define-key evil-visual-state-map (kbd "S-<left>") 'hanxic/evil-visual-indent-left-1)
+    ;; record line and column of point and mark
+    (let* ((point-line (line-number-at-pos (point)))
+           (point-col  (current-column))
+           (mark-line  (line-number-at-pos (mark)))
+           (mark-col   (save-excursion (goto-char (mark)) (current-column))))
+      ;; indent region
+      (indent-rigidly (region-beginning) (region-end) -1)
+      ;; restore point
+      (goto-char (point-min))
+      (forward-line (1- point-line))
+      (move-to-column (max 0 (- point-col 1)))
+      ;; restore mark
+      (set-mark (point-min))
+      (forward-line (1- mark-line))
+      (move-to-column (max 0 (- mark-col 1)))
+      (evil-visual-restore))))
+
+(with-eval-after-load 'evil
+  ;; Visual mode bindings
+  (define-key evil-visual-state-map (kbd ">") nil)
+  (define-key evil-visual-state-map (kbd "<") nil)
+  (define-key evil-normal-state-map (kbd ">") nil)
+  (define-key evil-normal-state-map (kbd "<") nil)
+  (evil-global-set-key 'visual (kbd ">") #'hanxic/evil-visual-indent-right-1)
+  (evil-global-set-key 'visual (kbd "<") #'hanxic/evil-visual-indent-left-1)
+  )
 
 ;; Disable evil mode when entering doc-view-mode
 (defun hanxic/disable-evil-mode-in-doc-view ()
