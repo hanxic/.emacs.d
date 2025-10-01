@@ -236,58 +236,6 @@
   (evil-set-initial-state 'message-buffer-mode 'normal)
   (evil-set-initial-state 'dashboard-mode 'normal)
   )
-(defun hanxic/evil-visual-indent-right-1 ()
-  "Indent selected region by 1 space to the right, keeping cursor at same column."
-  (interactive)
-  (when (use-region-p)
-    ;; record line and column of point and mark
-    (let* ((point-line (line-number-at-pos (point)))
-           (point-col  (current-column))
-           (mark-line  (line-number-at-pos (mark)))
-           (mark-col   (save-excursion (goto-char (mark)) (current-column))))
-      ;; indent region
-      (indent-rigidly (region-beginning) (region-end) 1)
-      ;; restore point
-      (goto-char (point-min))
-      (forward-line (1- point-line))
-      (move-to-column (+ point-col 1))
-      ;; restore mark
-      (set-mark (point-min))
-      (forward-line (1- mark-line))
-      (move-to-column (+ mark-col 1))
-      (evil-visual-restore))))
-
-(defun hanxic/evil-visual-indent-left-1 ()
-  "Indent selected region by 1 space to the left, keeping cursor at same column."
-  (interactive)
-  (when (use-region-p)
-    ;; record line and column of point and mark
-    (let* ((point-line (line-number-at-pos (point)))
-           (point-col  (current-column))
-           (mark-line  (line-number-at-pos (mark)))
-           (mark-col   (save-excursion (goto-char (mark)) (current-column))))
-      ;; indent region
-      (indent-rigidly (region-beginning) (region-end) -1)
-      ;; restore point
-      (goto-char (point-min))
-      (forward-line (1- point-line))
-      (move-to-column (max 0 (- point-col 1)))
-      ;; restore mark
-      (set-mark (point-min))
-      (forward-line (1- mark-line))
-      (move-to-column (max 0 (- mark-col 1)))
-      (evil-visual-restore))))
-
-(with-eval-after-load 'evil
-  ;; Visual mode bindings
-  (define-key evil-visual-state-map (kbd ">") nil)
-  (define-key evil-visual-state-map (kbd "<") nil)
-  (define-key evil-normal-state-map (kbd ">") nil)
-  (define-key evil-normal-state-map (kbd "<") nil)
-  (evil-global-set-key 'visual (kbd ">") #'hanxic/evil-visual-indent-right-1)
-  (evil-global-set-key 'visual (kbd "<") #'hanxic/evil-visual-indent-left-1)
-  )
-
 ;; Disable evil mode when entering doc-view-mode
 (defun hanxic/disable-evil-mode-in-doc-view ()
   (when (eq major-mode 'doc-view-mode)
@@ -912,6 +860,8 @@
   "Whether `latex-save-mode` shouldstart enabled the first time in a LaTeX buffer.
    This variable tracks the user's choice after the first toggle.")
 
+
+
 ;;;###autoload
 (define-minor-mode latex-save-mode
   "Toggle Latex Save Mode.
@@ -948,6 +898,232 @@
 (add-hook 'latex-save-mode-hook #'latex-save-mode--remember-choice)
 
 
+;;; Customization
+;; (defun hanxic/evil-visual-indent-right-1 ()
+;;   "Indent selected region by 1 space to the right, keeping cursor at same column."
+;;   (interactive)
+;;   (when (use-region-p)
+;;     ;; record line and column of point and mark
+;;     (let* ((point-line (line-number-at-pos (point)))
+;;            (point-col  (current-column))
+;;            (mark-line  (line-number-at-pos (mark)))
+;;            (mark-col   (save-excursion (goto-char (mark)) (current-column))))
+;;       ;; indent region
+;;       (indent-rigidly (region-beginning) (region-end) 1)
+;;       ;; restore point
+;;       (goto-char (point-min))
+;;       (forward-line (1- point-line))
+;;       (move-to-column (+ point-col 1))
+;;       ;; restore mark
+;;       (set-mark (point-min))
+;;       (forward-line (1- mark-line))
+;;       (move-to-column (+ mark-col 1))
+;;       (evil-visual-restore))))
+
+;; (defun hanxic/evil-visual-indent-left-1 ()
+;;   "Indent selected region by 1 space to the left, keeping cursor at same column."
+;;   (interactive)
+;;   (when (use-region-p)
+;;     ;; record line and column of point and mark
+;;     (let* ((point-line (line-number-at-pos (point)))
+;;            (point-col  (current-column))
+;;            (mark-line  (line-number-at-pos (mark)))
+;;            (mark-col   (save-excursion (goto-char (mark)) (current-column))))
+;;       ;; indent region
+;;       (indent-rigidly (region-beginning) (region-end) -1)
+;;       ;; restore point
+;;       (goto-char (point-min))
+;;       (forward-line (1- point-line))
+;;       (move-to-column (max 0 (- point-col 1)))
+;;       ;; restore mark
+;;       (set-mark (point-min))
+;;       (forward-line (1- mark-line))
+;;       (move-to-column (max 0 (- mark-col 1)))
+;;       (evil-visual-restore))))
+
+(defun hanxic/evil-calculate-region ()
+  "Calculate the region selected in Evil visual mode.
+Returns:
+- For 'char or 'line: a cons (BEG . END) of buffer positions.
+- Currently don't support block
+  "
+  (interactive)
+  (if (use-region-p)
+      (pcase evil-visual-selection
+        ('char
+         ;; character-wise: just return point and mark in order
+         (let ((beg (region-beginning))
+               (end (region-end)))
+           ;; (message "character: %d to %d" beg end)
+           (cons beg end)))
+        ('line
+         ;; Line-wise: extend to full lines
+        (let* ((beg (region-beginning))
+               (end (- (region-end) 1))
+               (beg-line (save-excursion (goto-char beg) (line-beginning-position)))
+               (end-line (save-excursion (goto-char end) (pos-eol))))
+          ;; (message "line: %d to %d" beg end)
+          ;; (message "beg-line: %d, end-line: %d" beg-line end-line)
+          (cons beg-line end-line))))))
+
+(defun hanxic/evil-indent-right-1 ()
+  "Indent selected lines (or current line) by one step, keep cursor in the same place."
+  (interactive)
+  (let ((col (current-column))
+        (line (line-number-at-pos)))
+    (if (use-region-p)
+        (pcase evil-visual-selection
+          ('char
+           (let* ((beg (region-beginning))
+                  (end (region-end))
+                  (beg-line (save-excursion (goto-char beg) (line-beginning-position)))
+                  (end-line (save-excursion (goto-char end) (pos-eol))))
+             (indent-rigidly beg-line end-line 1)
+             (evil-visual-select (1+ beg) end 'char)
+             (goto-char (point-min))
+             (forward-line (1- line))
+             (move-to-column col)))
+          ('line
+           (let* ((beg (region-beginning))
+                 (end (region-end))
+                 (beg-line (line-number-at-pos beg))
+                 (end-line (1- (line-number-at-pos end)))
+                 (beg-pos (save-excursion (goto-line beg-line) (line-beginning-position)))
+                 (end-pos (save-excursion (goto-line end-line) (line-end-position)))
+                 (visual-end-pos (save-excursion (goto-line (1- end-line)) (line-end-position))))
+             (indent-rigidly beg-pos end-pos 1)
+             (message "End is: %d" (- end 1))
+             (message "Beg-line is: %d, end-line is: %d" beg-line end-line)
+             (message "Beg-pos is: %d, end-pos is: %d" beg-pos end-pos)
+             (message "visual-end-pos is: %d" visual-end-pos)
+             (evil-visual-select beg-pos visual-end-pos 'line)
+             ;; (goto-char (point-min))
+             ;; (forward-line (1- line))
+             (goto-char beg-pos)
+             (forward-line (- end-line beg-line))
+             (message "line is: %d, column is: %d" line col)
+             (move-to-column col))))
+      (progn
+        (indent-rigidly (line-beginning-position) (line-end-position) 1)
+        (goto-char (point-min))
+        (forward-line (1- line))
+        (move-to-column (+ col 1))))))
+(defun hanxic/evil-indent-left-1 ()
+  "Indent selected lines (or current line) by one step, keep cursor in the same place."
+  (interactive)
+  (let ((col (current-column))
+        (line (line-number-at-pos)))
+    (if (use-region-p)
+        (pcase evil-visual-selection
+          ('char
+           (let* ((beg (region-beginning))
+                  (end (region-end))
+                  (beg-line (save-excursion (goto-char beg) (line-beginning-position)))
+                  (end-line (save-excursion (goto-char end) (pos-eol))))
+             (indent-rigidly beg-line end-line -1)
+             (evil-visual-select (1+ beg) end 'char)
+             (goto-char (point-min))
+             (forward-line (1- line))
+             (move-to-column col)))
+          ('line
+           (let* ((beg (region-beginning))
+                 (end (region-end))
+                 (beg-line (line-number-at-pos beg))
+                 (end-line (1- (line-number-at-pos end)))
+                 (beg-pos (save-excursion (goto-line beg-line) (line-beginning-position)))
+                 (end-pos (save-excursion (goto-line end-line) (line-end-position)))
+                 (visual-end-pos (save-excursion (goto-line (1- end-line)) (line-end-position))))
+             (indent-rigidly beg-pos end-pos -1)
+             (message "End is: %d" (- end 1))
+             (message "Beg-line is: %d, end-line is: %d" beg-line end-line)
+             (message "Beg-pos is: %d, end-pos is: %d" beg-pos end-pos)
+             (message "visual-end-pos is: %d" visual-end-pos)
+             (evil-visual-select beg-pos visual-end-pos 'line)
+             ;; (goto-char (point-min))
+             ;; (forward-line (1- line))
+             (goto-char beg-pos)
+             (forward-line (- end-line beg-line))
+             (message "line is: %d, column is: %d" line col)
+             (move-to-column col))))
+      (progn
+        (indent-rigidly (line-beginning-position) (line-end-position) -1)
+        (goto-char (point-min))
+        (forward-line (1- line))
+        (move-to-column (- col 1))))))
+
+(defun blah ()
+  "blah"
+  (interactive)
+  (message "Point: %d" (point))
+  (message "Current-column: %d" (current-column)))
+
+
+;; (defun hanxic/evil-indent-right-1 ()
+          ;;   "Indent selected lines (or current line) by one step, keep cursor in the same place."
+          ;;   (interactive)
+;;   (let ((col (current-column))
+;;         (line (line-number-at-pos)))
+;;     (if (use-region-p)
+;;         ;; Indent whole lines covered by region
+;;         (when (or (eq evil-visual-selection 'char)
+;;                   (eq evil-visual-selection 'line))
+;;           (let ((region (hanxic/evil-calculate-region)))
+;;             (let ((beg (car region))
+;;                   (end (cdr region)))
+;;               (indent-rigidly beg end 1)
+;;               (evil-visual-select beg end 'line))))
+;;       (indent-rigidly (line-beginning-position) (line-end-position) 1))
+;;     (goto-char (point-min))
+;;     (forward-line (1- line))
+;;     (move-to-column (+ col 1))))
+
+;; (defun my/print-evil-region ()
+;;   "Print info about current Evil visual selection."
+;;   (interactive)
+;;   (if (use-region-p)
+;;       (message "Region from %d to %d, type: %s"
+;;                (region-beginning)
+;;                (region-end)
+;;                evil-visual-selection)
+;;     (message "No visual region active")))
+;; (defun blah ()
+;;     "blah"
+;;     (interactive)
+;;     (let* ((beg (region-beginning))
+;;            (end (region-end))
+;;            (beg-line (save-excursion (goto-char beg) (line-beginning-position)))
+;;            (end-line (save-excursion (goto-char end) (pos-eol))))
+;;       (message "beg: %d" beg)
+;;       (message "end: %d" end)
+;;       (message "beg-line: %d" beg-line)
+;;       (message "end-line: %d" end-line)))
+    
+
+;; (defun hanxic/evil-indent-left-1 ()
+;;   "Indent selected lines (or current line) by one step, keep cursor in the same place."
+;;   (interactive)
+;;   (let ((col (current-column))
+;;         (line (line-number-at-pos)))
+;;     (save-excursion
+;;       (if (use-region-p)
+;;           ;; Indent whole lines covered by region
+;;           (let* ((beg (region-beginning))
+;;                  (end (region-end))
+;;                  (beg-line (save-excursion (goto-char beg) (line-beginning-position)))
+;;                  (end-line (save-excursion (goto-char end) (if (eolp) (point) (line-end-position))
+;;                                            )))
+;;             (indent-rigidly beg-line end-line -1))
+;;         (indent-rigidly (line-beginning-position) (line-end-position) -1)))
+;;     (evil-visual-restore)))
+
+(define-key evil-visual-state-map (kbd ">") nil)
+(define-key evil-visual-state-map (kbd "<") nil)
+(define-key evil-normal-state-map (kbd ">") nil)
+(define-key evil-normal-state-map (kbd "<") nil)
+(evil-global-set-key 'visual (kbd "") #'hanxic/evil-indent-right-1)
+(evil-global-set-key 'visual (kbd "<") #'hanxic/evil-indent-left-1)
+(evil-global-set-key 'normal (kbd ">") #'hanxic/evil-indent-right-1)
+(evil-global-set-key 'normal (kbd "<") #'hanxic/evil-indent-left-1)
 
 
 
