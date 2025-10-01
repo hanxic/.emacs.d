@@ -1026,7 +1026,7 @@ Returns:
              ;; (forward-line (1- line))
              ;; (move-to-column (1- col))
              (goto-char (- end (- beg-line end-line))
-             ))
+             )))
           ('line
            (let* ((beg (region-beginning))
                  (end (region-end))
