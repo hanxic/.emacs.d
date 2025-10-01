@@ -24,7 +24,7 @@
 ;; -------- Languages --------
 ;; latex - tbd
 ;; ocaml
-;; lsp
+;; lsp-mode/
 ;;
 
 ;;; Commentary:
@@ -236,6 +236,21 @@
   (evil-set-initial-state 'message-buffer-mode 'normal)
   (evil-set-initial-state 'dashboard-mode 'normal)
   )
+(defun hanxic/evil-visual-indent-right-1 ()
+  "Indent selected region by 1 space to the right."
+  (interactive)
+  (when (use-region-p)
+    (indent-rigidly (region-beginning) (region-end) 1)
+    (evil-visual-restore)))
+
+(defun hanxic/evil-visual-indent-left-1 ()
+  "Indent selected region by 1 space to the left."
+  (interactive)
+  (when (use-region-p)
+    (indent-rigidly (region-beginning) (region-end) -1)
+    (evil-visual-restore)))
+(define-key evil-visual-state-map (kbd "S-<right>") 'hanxic/evil-visual-indent-right-1)
+(define-key evil-visual-state-map (kbd "S-<left>") 'hanxic/evil-visual-indent-left-1)
 
 ;; Disable evil mode when entering doc-view-mode
 (defun hanxic/disable-evil-mode-in-doc-view ()
@@ -326,7 +341,9 @@
 ;;; Company
 (use-package company
   :ensure t
-  :hook (afer-init . global-company-mode))
+  :hook (afer-init . global-company-mode)
+  :config
+  (setq company-idle-delay 1))
 
 ;;; Org mode
 ;; (add-hook 'org-mode-hook #'turn-on-auto-fill)
@@ -429,8 +446,9 @@
          (lsp-mode . lsp-enable-which-key-integration))
   :commands lsp
   :custom
+  (lsp-completion-auto-delay 1)
   (lsp-eldoc-render-all t)
-  (lsp-idle-delay 3)
+  ;; (lsp-idle-delay 3)
   (lsp-inlay-hint-enable t)
   :config
   (setq lsp-file-watch-ignored-directories
@@ -456,7 +474,7 @@
 
 (setq gc-cons-threshold 1280000)
 (setq read-process-output-max (* 1024 1024)) ;; 1mb
-(setq lsp-log-io t)
+(setq lsp-log-io nil)
 
 ;; optionally
 (use-package lsp-ui
@@ -472,7 +490,11 @@
 (use-package helm-lsp :commands helm-lsp-workspace-symbol)
 
 ;;; Language-specific Configuration
-;;; Rocq
+;;;; Treesit
+(require 'treesit)
+(add-to-list 'treesit-language-source-alist
+             '(lean "https://github.com/Julian/tree-sitter-lean.git"))
+;;;; Rocq
 (use-package proof-general
   :init
   (setq proof-splash-enable nil
@@ -491,7 +513,7 @@
 (use-package company-coq
   :hook (coq-mode . company-coq-mode))
 
-;; ;;; Haskell
+;;;; Haskell
 (use-package haskell-mode
   :mode ("\\.hs\\'" . haskell-mode)
   :ensure t
@@ -508,7 +530,7 @@
   :config
   (setq lsp-haskell-server-path "~/.ghcup/bin/haskell-language-server-wrapper"))
 
-;;; HTML, CSS, JavaScript
+;;;; HTML, CSS, JavaScript
 (use-package web-mode
   :ensure t
   :mode
@@ -522,7 +544,7 @@
    ("\\.mustache\\'" . web-mode)
    ("\\.djhtml\\'" . web-mode)))
 
-;;; OCaml
+;;;; OCaml
 ;; ## added by OPAM user-setup for emacs / base ## 56ab50dc8996d2bb95e7856a6eddb17b ## you can edit, but keep this line
 (require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
 ;; ## end of OPAM user-setup addition for emacs / base ## keep this line
@@ -699,7 +721,7 @@
 (add-to-list 'auto-mode-alist '("\\.ml[yl]+$" . tuareg-menhir-mode))
 
 
-;;; Lean
+;;;; Lean
 ;; lean4-mode require Dash
 (use-package dash
   :ensure t)
@@ -719,10 +741,17 @@
 ;;   (:map lean4-mode-map
 ;;         ("C-c C-d" . lsp-describe-thing-at-point)))
 
-(add-to-list 'load-path "~/projects/lean-self/lean4-mode/")
-(require 'lean4-mode)
-(add-to-list 'auto-mode-alist '("\\.lean\\'" . lean4-mode))
-(require 'lean4-ghost)
+;; (add-to-list 'load-path "~/projects/lean-self/lean4-mode/")
+(use-package lean4-mode
+  :load-path "~/projects/lean-self/lean4-mode/"
+  :config
+  (require 'lean4-ghost)
+  (add-to-list 'auto-mode-alist '("\\.lean\\'" . lean4-mode)))
+;; (add-to-list 'auto-mode-alist '("\\.lean\\'" . lean4-mode))
+;; (require 'lean4-ghost)
+
+;; (add-to-list 'major-mode-remap-alist
+;;              '(lean4-mode . lean4-ts-mode))
 
 ;; (add-hook 'lean4-mode-hook
 ;;           (lambda ()
@@ -882,12 +911,6 @@
 
 (add-hook 'latex-save-mode-hook #'latex-save-mode--remember-choice)
 
-;;;; Treesit
-;; (require 'treesit)
-;; (add-to-list 'treesit-language-source-alist
-;;              '(lean "https://github.com/Julian/tree-sitter-lean.git"))
-
-;;;; lean-walker
 
 
 
