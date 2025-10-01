@@ -969,7 +969,8 @@ Returns:
 (defun hanxic/evil-indent-right-1 ()
   "Indent selected lines (or current line) by one step, keep cursor in the same place."
   (interactive)
-  (let ((col (current-column))
+  (let ((cursor-marker (point-marker))
+        (col (current-column))
         (line (line-number-at-pos)))
     (if (use-region-p)
         (pcase evil-visual-selection
@@ -996,7 +997,7 @@ Returns:
              (message "Beg-line is: %d, end-line is: %d" beg-line end-line)
              (message "Beg-pos is: %d, end-pos is: %d" beg-pos end-pos)
              (message "visual-end-pos is: %d" visual-end-pos)
-             (evil-visual-select beg-pos visual-end-pos 'line)
+             (evil-visual-select beg-pos beg-pos 'line)
              ;; (goto-char (point-min))
              ;; (forward-line (1- line))
              (goto-char beg-pos)
@@ -1005,13 +1006,12 @@ Returns:
              (move-to-column col))))
       (progn
         (indent-rigidly (line-beginning-position) (line-end-position) 1)
-        (goto-char (point-min))
-        (forward-line (1- line))
-        (move-to-column (+ col 1))))))
+        (goto-char cursor-marker)))))
 (defun hanxic/evil-indent-left-1 ()
   "Indent selected lines (or current line) by one step, keep cursor in the same place."
   (interactive)
-  (let ((col (current-column))
+  (let ((cursor-marker (point-marker))
+        (col (current-column))
         (line (line-number-at-pos)))
     (if (use-region-p)
         (pcase evil-visual-selection
@@ -1021,10 +1021,12 @@ Returns:
                   (beg-line (save-excursion (goto-char beg) (line-beginning-position)))
                   (end-line (save-excursion (goto-char end) (pos-eol))))
              (indent-rigidly beg-line end-line -1)
-             (evil-visual-select (1+ beg) end 'char)
-             (goto-char (point-min))
-             (forward-line (1- line))
-             (move-to-column col)))
+             (evil-visual-select (1- beg) end 'char)
+             ;; (goto-char (point-min))
+             ;; (forward-line (1- line))
+             ;; (move-to-column (1- col))
+             (goto-char (- end (- beg-line end-line))
+             ))
           ('line
            (let* ((beg (region-beginning))
                  (end (region-end))
@@ -1038,7 +1040,7 @@ Returns:
              (message "Beg-line is: %d, end-line is: %d" beg-line end-line)
              (message "Beg-pos is: %d, end-pos is: %d" beg-pos end-pos)
              (message "visual-end-pos is: %d" visual-end-pos)
-             (evil-visual-select beg-pos visual-end-pos 'line)
+             (evil-visual-select beg-pos beg-pos 'line)
              ;; (goto-char (point-min))
              ;; (forward-line (1- line))
              (goto-char beg-pos)
@@ -1047,9 +1049,7 @@ Returns:
              (move-to-column col))))
       (progn
         (indent-rigidly (line-beginning-position) (line-end-position) -1)
-        (goto-char (point-min))
-        (forward-line (1- line))
-        (move-to-column (- col 1))))))
+        (goto-char cursor-marker)))))
 
 (defun blah ()
   "blah"
@@ -1059,9 +1059,9 @@ Returns:
 
 
 ;; (defun hanxic/evil-indent-right-1 ()
-          ;;   "Indent selected lines (or current line) by one step, keep cursor in the same place."
-          ;;   (interactive)
-;;   (let ((col (current-column))
+;;   "Indent selected lines (or current line) by one step, keep cursor in the same place."
+;;   (interactive)
+ ;;   (let ((col (current-column))
 ;;         (line (line-number-at-pos)))
 ;;     (if (use-region-p)
 ;;         ;; Indent whole lines covered by region
