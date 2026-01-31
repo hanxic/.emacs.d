@@ -335,12 +335,13 @@
 (use-package org
   :init
   (setq-default fill-column 80)
-  :hook (org-mode . turn-on-auto-fill)
+  :hook (org-mode . visual-line-mode)
   :custom
   (org-highlight-latex-and-related '(latex))
   (org-use-sub-superscripts '{})
   (org-export-with-LaTeX-fragments t)
   (org-latex-create formula-image-program 'dvipng)
+  (org-hide-emphasis-markers t)
   :config
   (setq org-format-latex-options
       '(:foreground "Black"
@@ -354,6 +355,8 @@
     :ensure t
     :hook (org-mode . org-fragtog-mode))
   )
+(use-package org-tree-slide
+  :ensure t)
 
 
 ;;; Latex
@@ -535,8 +538,12 @@
 ;;;
 ;;;; ocaml configuration
 ;; add opam emacs directory to the load-path
-(setq opam-dir (substring (shell-command-to-string "opam config var prefix 2> /dev/null") 0 -1))
-(setq opam-share (substring (shell-command-to-string "opam config var share 2> /dev/null") 0 -1))
+;; (setq opam-dir (substring (shell-command-to-string "opam config var prefix 2> /dev/null") 0 -1))
+;; (setq opam-share (substring (shell-command-to-string "opam config var share 2> /dev/null") 0 -1))
+(let ((prefix (string-trim (shell-command-to-string "opam config var prefix 2> /dev/null"))))
+  (setq opam-dir (if (> (length prefix) 0) prefix nil)))
+(let ((share (string-trim (shell-command-to-string "opam config var share 2> /dev/null"))))
+  (setq opam-share (if (> (length share) 0) share nil)))
 
 (add-to-list 'load-path (concat opam-share "/emacs/site-lisp"))
 
@@ -707,40 +714,31 @@
 
 ;;;; Lean
 ;; lean4-mode require Dash
-(use-package dash
-  :ensure t)
+;; (use-package dash
+;;   :ensure t)
 ;; (use-package lean4-mode
-;;   :ensure t
-;;   :commands lean4-mode
-;;   :vc (:url "https://github.com/leanprover-community/lean4-mode.git"
-;;        :rev :last-release
-;;        ;; Or, if you prefer the bleeding edge version of Lean4-Mode:
-;;        ;; :rev :newest
-;;        )
-;;   :mode ("\\.lean\\'" . lean4-mode)
+;;   :load-path "~/projects/lean-self/lean4-mode/"
 ;;   :config
-;;   (setq lean4-lsp-file-watch-ignored
-;;         '(".git" "_target" ".lake" "build"))
-;;   :bind
-;;   (:map lean4-mode-map
-;;         ("C-c C-d" . lsp-describe-thing-at-point)))
+;;   (require 'lean4-ghost)
+;;   (add-to-list 'auto-mode-alist '("\\.lean\\'" . lean4-mode)))
 
-;; (add-to-list 'load-path "~/projects/lean-self/lean4-mode/")
-(use-package lean4-mode
-  :load-path "~/projects/lean-self/lean4-mode/"
-  :config
-  (require 'lean4-ghost)
-  (add-to-list 'auto-mode-alist '("\\.lean\\'" . lean4-mode)))
-;; (add-to-list 'auto-mode-alist '("\\.lean\\'" . lean4-mode))
-;; (require 'lean4-ghost)
+;; (use-package nael-autoloads
+;;   :load-path "~/projects/lean-self/nael"
+;;   )
 
-;; (add-to-list 'major-mode-remap-alist
-;;              '(lean4-mode . lean4-ts-mode))
+(add-to-list 'load-path "~/projects/lean-self/nael/nael")
+(add-to-list 'load-path "~/projects/lean-self/nael/nael-lsp")
+(require 'info)
+(info-initialize)
+(add-to-list 'Info-directory-list "~/projects/lean-self/nael/nael")
+(require 'nael-autoloads)
+(add-hook 'nael-mode-hook #'abbrev-mode)
+(add-hook 'nael-mode-hook #'eglot-ensure)
 
-;; (add-hook 'lean4-mode-hook
-;;           (lambda ()
-;;             (require 'lean4-ghost)
-;;             (lean4-ghost-mode 1)))
+;; (use-package nael-lsp-autoloads
+;;   :load-path "~/projects/lean-self/nael"
+;;   )
+
 
 ;;; More Miscellaneous
 (setq-default tab-width 2)
@@ -810,51 +808,66 @@
   "Return the PDF filename corresponding to the LaTeX FILENAME."
   (concat (file-name-sans-extension filename) suffix))
 
-(defun hanxic/latex-make (&rest _args)
-  "Run `make` on saving a LaTeX file, or normal `latexmk`, in overleaf style."
-  (interactive)
-  (when (and buffer-file-name
-             (derived-mode-p 'latex-mode 'LaTeX-mode))
-    (let ((default-directory (file-name-directory buffer-file-name))
-          (make-cmd
-           (format
-            "make -k && open %s"
-            (hanxic/suffix-conversion buffer-file-name ".pdf")))
-          (latexmk-cmd
-           (format
-            "latexmk -pdf && open %s"
-            (hanxic/suffix-conversion buffer-file-name ".pdf"))))
-      (message "Running make for %s..." buffer-file-name)
+(defun hanxic/latex-make ()
+  "Run `make` on the file if there is a make on the project root"
+  (when-let ((root (locate-dominating-file default-directory "Makefile")))
+    (let ((default-directory root))
+      (compile "make"))))
 
-      ;; Step 1: run make
-      (hanxic/compile-with-callbacks
-       ;; "make -k"
-       make-cmd
-       ;; make success
-       (lambda ()
-         (hanxic/funcall-after-delay-focus
-          1
-          (lambda ()
-            (hanxic/invoke-funcall-window "*compilation*" #'delete-window))))
-       ;; make failure
-       (lambda ()
-         ;; Step 2: run latexmk
-         (message "Make failed, running latexmk...")
-         (hanxic/compile-with-callbacks
-          ;; "latexmk -pdf"
-          latexmk-cmd
-          ;; latexmk success
-          (lambda ()
-            (hanxic/funcall-after-delay-focus
-             1
-             (lambda ()
-               (hanxic/invoke-funcall-window "*compilation*" #'delete-window))))
-          ;; latexmk failure
-          (lambda ()
-            (hanxic/funcall-after-delay-focus
-             1
-             (lambda ()
-               (hanxic/invoke-funcall-window "*compilation*" #'select-window))))))))))
+;; (defun hanxic/latex-make (&rest _args)
+;;   "Run `make` on saving a LaTeX file, or normal `latexmk`, in overleaf style."
+;;   (interactive)
+;;   (when (and buffer-file-name
+;;              (derived-mode-p 'latex-mode 'LaTeX-mode))
+;;     (let ((default-directory (file-name-directory buffer-file-name))
+;;           (make-cmd
+;;            (format
+;;             "make -k && open %s"
+;;             (hanxic/suffix-conversion buffer-file-name ".pdf")))
+;;           (latexmk-cmd
+;;            (format
+;;             "latexmk -xelatex -pdf && open %s"
+;;             (hanxic/suffix-conversion buffer-file-name ".pdf"))))
+;;       (message "Running make for %s..." buffer-file-name)
+
+;;       ;; Step 1: run make
+;;       (hanxic/compile-with-callbacks
+;;        ;; "make -k"
+;;        make-cmd
+;;        ;; make success
+;;        (lambda ()
+;;          (hanxic/funcall-after-delay-focus
+;;           1
+;;           (lambda ()
+;;             (hanxic/invoke-funcall-window "*compilation*" #'delete-window))))
+;;        ;; make failure
+;;        (lambda ()
+;;          ;; Step 2: run latexmk
+;;          (message "Make failed, running latexmk...")
+;;          (hanxic/compile-with-callbacks
+;;           ;; "latexmk -pdf"
+;;           latexmk-cmd
+;;           ;; latexmk success
+;;           (lambda ()
+;;             (hanxic/funcall-after-delay-focus
+;;              1
+;;              (lambda ()
+;;                (hanxic/invoke-funcall-window "*compilation*" #'delete-window))))
+;;           ;; latexmk failure
+;;           (lambda ()
+;;             (hanxic/funcall-after-delay-focus
+;;              1
+;;              (lambda ()
+;;                (hanxic/invoke-funcall-window "*compilation*" #'select-window))))))))))
+(defun hanxic/close-compilation-window-on-success (buffer status)
+  "Close compilation window if compilation finished successfully."
+  (when (and (string-match-p "finished" status)
+             (buffer-live-p buffer))
+    (when-let ((win (get-buffer-window buffer)))
+      (delete-window win))))
+
+(add-hook 'compilation-finish-functions
+          #'hanxic/close-compilation-window-on-success)
 
 (defvar latex-save-mode--default-enabled t
   "Whether `latex-save-mode` shouldstart enabled the first time in a LaTeX buffer.
@@ -897,8 +910,46 @@
 
 (add-hook 'latex-save-mode-hook #'latex-save-mode--remember-choice)
 
+;;;; CSV Mode
+(use-package csv-mode)
 
 ;;; Customization
+;;;; Dired
+(with-eval-after-load 'dired
+  (define-key dired-mode-map "?" #'dired-summary))
+
+(defvar hanxic/personal-map
+  (make-sparse-keymap)
+  "Personal prefix keymap.")
+
+(global-set-key (kbd "C-c p") hanxic/personal-map)
+
+(defvar hanxic/personal-preview-map
+  (make-sparse-keymap)
+  "Personal preview commands.")
+
+(define-key hanxic/personal-map (kbd "p") hanxic/personal-preview-map)
+
+(defun hanxic/preview-init ()
+  "Preview init.el in View mode."
+  (interactive)
+  (view-file user-init-file))
+(define-key hanxic/personal-preview-map (kbd "i") #'hanxic/preview-init)
+
+(defun hanxic/preview-bin ()
+  "Preview ~/.bin directory."
+  (interactive)
+  (dired "~/.bin"))
+(define-key hanxic/personal-preview-map (kbd "b") #'hanxic/preview-bin)
+
+(with-eval-after-load 'which-key
+  (which-key-add-key-based-replacements
+    "C-c p" "personal"
+    "C-c p p" "preview"
+    "C-c p p i" "init.el"
+    "C-c p p b" "bin"))
+
+
 ;; (defun hanxic/evil-visual-indent-right-1 ()
 ;;   "Indent selected region by 1 space to the right, keeping cursor at same column."
 ;;   (interactive)
@@ -1051,80 +1102,15 @@ Returns:
         (indent-rigidly (line-beginning-position) (line-end-position) -1)
         (goto-char cursor-marker)))))
 
-(defun blah ()
-  "blah"
-  (interactive)
-  (message "Point: %d" (point))
-  (message "Current-column: %d" (current-column)))
-
-
-;; (defun hanxic/evil-indent-right-1 ()
-;;   "Indent selected lines (or current line) by one step, keep cursor in the same place."
-;;   (interactive)
- ;;   (let ((col (current-column))
-;;         (line (line-number-at-pos)))
-;;     (if (use-region-p)
-;;         ;; Indent whole lines covered by region
-;;         (when (or (eq evil-visual-selection 'char)
-;;                   (eq evil-visual-selection 'line))
-;;           (let ((region (hanxic/evil-calculate-region)))
-;;             (let ((beg (car region))
-;;                   (end (cdr region)))
-;;               (indent-rigidly beg end 1)
-;;               (evil-visual-select beg end 'line))))
-;;       (indent-rigidly (line-beginning-position) (line-end-position) 1))
-;;     (goto-char (point-min))
-;;     (forward-line (1- line))
-;;     (move-to-column (+ col 1))))
-
-;; (defun my/print-evil-region ()
-;;   "Print info about current Evil visual selection."
-;;   (interactive)
-;;   (if (use-region-p)
-;;       (message "Region from %d to %d, type: %s"
-;;                (region-beginning)
-;;                (region-end)
-;;                evil-visual-selection)
-;;     (message "No visual region active")))
-;; (defun blah ()
-;;     "blah"
-;;     (interactive)
-;;     (let* ((beg (region-beginning))
-;;            (end (region-end))
-;;            (beg-line (save-excursion (goto-char beg) (line-beginning-position)))
-;;            (end-line (save-excursion (goto-char end) (pos-eol))))
-;;       (message "beg: %d" beg)
-;;       (message "end: %d" end)
-;;       (message "beg-line: %d" beg-line)
-;;       (message "end-line: %d" end-line)))
-    
-
-;; (defun hanxic/evil-indent-left-1 ()
-;;   "Indent selected lines (or current line) by one step, keep cursor in the same place."
-;;   (interactive)
-;;   (let ((col (current-column))
-;;         (line (line-number-at-pos)))
-;;     (save-excursion
-;;       (if (use-region-p)
-;;           ;; Indent whole lines covered by region
-;;           (let* ((beg (region-beginning))
-;;                  (end (region-end))
-;;                  (beg-line (save-excursion (goto-char beg) (line-beginning-position)))
-;;                  (end-line (save-excursion (goto-char end) (if (eolp) (point) (line-end-position))
-;;                                            )))
-;;             (indent-rigidly beg-line end-line -1))
-;;         (indent-rigidly (line-beginning-position) (line-end-position) -1)))
-;;     (evil-visual-restore)))
-
-(define-key evil-visual-state-map (kbd ">") nil)
-(define-key evil-visual-state-map (kbd "<") nil)
-(define-key evil-normal-state-map (kbd ">") nil)
-(define-key evil-normal-state-map (kbd "<") nil)
-(evil-global-set-key 'visual (kbd "") #'hanxic/evil-indent-right-1)
-(evil-global-set-key 'visual (kbd "<") #'hanxic/evil-indent-left-1)
-(evil-global-set-key 'normal (kbd ">") #'hanxic/evil-indent-right-1)
-(evil-global-set-key 'normal (kbd "<") #'hanxic/evil-indent-left-1)
-
+(defvar hanxic-indent-keymap (make-sparse-keymap)
+  "Keymap for Hanxic indentation commands after C-<tab>.")
+;; Bind sub-keys
+(define-key hanxic-indent-keymap (kbd "<right>") #'hanxic/evil-indent-right-1)
+(define-key hanxic-indent-keymap (kbd "<left>")  #'hanxic/evil-indent-left-1);
+(global-set-key (kbd "C-<tab>") hanxic-indent-keymap)
+;; Step 2: bind prefix key in normal and visual modes
+(define-key evil-normal-state-map (kbd "C-<tab>") hanxic-indent-keymap)
+(define-key evil-visual-state-map (kbd "C-<tab>") hanxic-indent-keymap)
 
 
 (custom-set-variables
@@ -1133,7 +1119,15 @@ Returns:
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(helm-minibuffer-history-key "M-p")
- '(package-selected-packages nil)
+ '(package-selected-packages
+   '(command-log-mode company-auctex company-coq copilot csv-mode dune ef-themes
+                      evil-collection evil-nerd-commenter flycheck-haskell
+                      flycheck-ocaml helm-lsp helm-projectile helm-rg helpful
+                      hlint-refactor lsp-haskell lsp-ui magit nerd-icons
+                      ocamlformat org-fragtog proof-general telephone-line
+                      tuareg undo-fu web-mode yasnippet-snippets))
+ '(safe-local-variable-values
+   '((jinx-dir-local-words . "ElDoc Nael Mekeor Melire reindent")))
  '(warning-suppress-log-types '((lsp-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
