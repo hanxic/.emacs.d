@@ -369,11 +369,65 @@
 (dolist (hook '(change-log-mode-hook log-edit-mode-hook))
   (add-hook hook (lambda () (flyspell-mode -1))))
 
-
 (use-package tex 
   :ensure auctex
   :defer auctex
+  :config
+  (setq
+   TeX-source-correlate-mode t
+   TeX-source-correlate-start-server t
+   TeX-view-program-selection '((output-pdf "Skim"))
+   TeX-view-program-list '(("Skim" "/Applications/Skim.app/Contents/SharedSupport/displayline \ -b -g %n %o %b"))
+   TeX-command-extra-options "-synctex=1"
+   TeX-show-compilation t
+   TeX-scroll-buffer t
+   )
   ) 
+
+(require 'project)
+
+(with-eval-after-load 'tex
+  ;; --- 1) Define a runner that executes MAKE from the project root ---
+  (defun my/TeX-run-make-at-project-root (name command file)
+    "Run make from the project root (project.el), falling back to current dir."
+    (let* ((proj (project-current nil))
+           (root (when proj (project-root proj)))
+           (default-directory (or root default-directory))
+           )
+      (setq TeX-master ".")
+      (message "proj = %s" proj)
+      (message "root = %s" root)
+      (message "default-directory = %s" default-directory)
+      (TeX-run-compile name command file)))
+
+  ;; --- 2) (Optional but recommended) Register LatexMk as well ---
+  ;; Comment this out if you don't use latexmk.
+  (add-to-list 'TeX-command-list
+               '("LatexMk" "latexmk -pdf -synctex=1 %s"
+                 TeX-run-compile nil t))
+
+  ;; --- 3) Register Make as a TeX command (so AUCTeX knows about it) ---
+  ;; This makes "Make" show up in the C-c C-c menu, and lets it be the default.
+  (setq TeX-command-list
+        (assq-delete-all "Make" TeX-command-list))
+  (push '("Make" "make" my/TeX-run-make-at-project-root nil t) TeX-command-list)
+
+  ;; --- 4) Conditional default command per buffer ---
+  (defun my/TeX-set-default-command ()
+    "If project root has Makefile, default to Make; else default to LaTeX (or LatexMk)."
+    (let* ((proj (project-current nil))
+           (root (when proj (project-root proj)))
+           (has-makefile (and root (file-exists-p (expand-file-name "Makefile" root)))))
+      (setq-local TeX-command-default
+                  (if has-makefile
+                      "Make"
+                    ;; choose ONE:
+                    ;; "LaTeX"
+                    "LatexMk"))))
+
+  (add-hook 'LaTeX-mode-hook #'my/TeX-set-default-command))
+
+(setq compilation-scroll-output t)
 
 (add-hook 'LaTeX-mode-hook 'flyspell-mode)
 (setq TeX-auto-save t)
@@ -869,7 +923,7 @@
 (add-hook 'compilation-finish-functions
           #'hanxic/close-compilation-window-on-success)
 
-(defvar latex-save-mode--default-enabled t
+(defvar latex-save-mode--default-enabled nil
   "Whether `latex-save-mode` shouldstart enabled the first time in a LaTeX buffer.
    This variable tracks the user's choice after the first toggle.")
 
@@ -909,6 +963,9 @@
   (setq latex-save-mode--default-enabled latex-save-mode))
 
 (add-hook 'latex-save-mode-hook #'latex-save-mode--remember-choice)
+
+;; (defun hanxic/TeX-set-compile-command ()
+;;   "Use make if a Makefile exists, otherwise use LaTeX"
 
 ;;;; CSV Mode
 (use-package csv-mode)
