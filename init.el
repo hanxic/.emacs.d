@@ -369,16 +369,16 @@
 (dolist (hook '(change-log-mode-hook log-edit-mode-hook))
   (add-hook hook (lambda () (flyspell-mode -1))))
 
-(use-package tex 
+(use-package tex
   :ensure auctex
   :defer auctex
   :config
   (setq
    TeX-source-correlate-mode t
    TeX-source-correlate-start-server t
-   TeX-view-program-selection '((output-pdf "Skim"))
-   TeX-view-program-list '(("Skim" "/Applications/Skim.app/Contents/SharedSupport/displayline \ -b -g %n %o %b"))
    TeX-command-extra-options "-synctex=1"
+   TeX-view-program-selection '((output-pdf "Skim"))
+   TeX-view-program-list '(("Skim" "/Applications/Skim.app/Contents/SharedSupport/displayline -b -g %n %o %b"))
    TeX-show-compilation t
    TeX-scroll-buffer t
    )
@@ -392,9 +392,9 @@
     "Run make from the project root (project.el), falling back to current dir."
     (let* ((proj (project-current nil))
            (root (when proj (project-root proj)))
-           (default-directory (or root default-directory))
+           ;; (default-directory (or root default-directory))
            )
-      (setq TeX-master ".")
+      ;; (setq TeX-master ".")
       (message "proj = %s" proj)
       (message "root = %s" root)
       (message "default-directory = %s" default-directory)
@@ -433,7 +433,7 @@
 (add-hook 'LaTeX-mode-hook 'flyspell-mode)
 (setq TeX-auto-save t)
 (setq TeX-parse-self t)
-(setq-default TeX-master nil)
+;; (setq-default TeX-master nil)
 (add-hook 'plain-TeX-mode-hook
           (lambda () (set (make-local-variable 'TeX-electric-math)
                           (cons "$" "$"))))
