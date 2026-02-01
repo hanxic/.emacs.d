@@ -956,7 +956,10 @@
 ;;; Customization
 ;;;; Dired
 (with-eval-after-load 'dired
-  (define-key dired-mode-map "?" #'dired-summary))
+  (define-key dired-mode-map "?" #'dired-summary)
+  (define-key dired-mode-map (kbd "C-c +") #'dired-create-empty-file)
+  )
+
 
 ;;;; Preview hotkeys
 (defvar hanxic/personal-map
@@ -1032,6 +1035,11 @@ If PATH is a file, open with view-file."
 (add-hook 'vterm-mode-hook
           (lambda ()
             (hl-line-mode -1)))
+
+;;;; Themes
+(use-package autothemer
+  :ensure t)
+
 
 ;; (with-eval-after-load 'which-key
 ;;   (which-key-add-key-based-replacements
@@ -1209,14 +1217,18 @@ Returns:
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
+ '(custom-safe-themes
+   '("b1808f57c03036c9eac03a194ec683dd14d5a1b3a99e58a3ed755296debe7eb9"
+     "e1d764c14d06a3ee795fc8825488b915ac4f543fcaa15cd3e74e3c484a6f9454"
+     "10d44b43eb420d1dc019700cdec828ed9d0e8aeab130083f413040881d9453ca" default))
  '(helm-minibuffer-history-key "M-p")
  '(package-selected-packages
-   '(command-log-mode company-auctex company-coq copilot csv-mode dune ef-themes
-                      evil-collection evil-nerd-commenter flycheck-haskell
-                      flycheck-ocaml helm-lsp helm-projectile helm-rg helpful
-                      hlint-refactor lsp-haskell lsp-ui magit multi-vterm
-                      nerd-icons ocamlformat org-fragtog proof-general
-                      telephone-line tuareg undo-fu web-mode yasnippet-snippets))
+   '(autothemer command-log-mode company-auctex company-coq copilot csv-mode dune
+                ef-themes evil-collection evil-nerd-commenter flycheck-haskell
+                flycheck-ocaml helm-lsp helm-projectile helm-rg helpful
+                hlint-refactor lsp-haskell lsp-ui magit multi-vterm nerd-icons
+                ocamlformat org-fragtog proof-general telephone-line tuareg
+                undo-fu web-mode yasnippet-snippets))
  '(safe-local-variable-values
    '((jinx-dir-local-words . "ElDoc Nael Mekeor Melire reindent")))
  '(warning-suppress-log-types '((lsp-mode))))
