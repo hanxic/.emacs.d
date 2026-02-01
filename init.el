@@ -913,11 +913,52 @@
 ;;;; CSV Mode
 (use-package csv-mode)
 
+;;; Terminal
+;;;; VTerm
+(use-package vterm
+  :ensure t)
+
+(use-package multi-vterm
+	:config
+	(add-hook 'vterm-mode-hook
+			(lambda ()
+			(setq-local evil-insert-state-cursor 'box)
+			(evil-insert-state)))
+	(define-key vterm-mode-map [return]                      #'vterm-send-return)
+
+	(setq vterm-keymap-exceptions nil)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-e")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-f")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-a")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-v")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-b")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-w")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-u")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-d")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-n")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-m")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-p")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-j")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-k")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-r")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-t")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-g")      #'vterm--self-insert)
+	;; (evil-define-key 'insert vterm-mode-map (kbd "C-c")      #'vterm--self-insert)
+	(evil-define-key 'insert vterm-mode-map (kbd "C-SPC")    #'vterm--self-insert)
+	(evil-define-key 'normal vterm-mode-map (kbd "C-d")      #'vterm--self-insert)
+	(evil-define-key 'normal vterm-mode-map (kbd ",n")       #'multi-vterm)
+	(evil-define-key 'normal vterm-mode-map (kbd ",>")       #'multi-vterm-next)
+	(evil-define-key 'normal vterm-mode-map (kbd ",>")       #'multi-vterm-prev)
+	(evil-define-key 'normal vterm-mode-map (kbd "i")        #'evil-insert-resume)
+	(evil-define-key 'normal vterm-mode-map (kbd "o")        #'evil-insert-resume)
+	(evil-define-key 'normal vterm-mode-map (kbd "<return>") #'evil-insert-resume))
+
 ;;; Customization
 ;;;; Dired
 (with-eval-after-load 'dired
   (define-key dired-mode-map "?" #'dired-summary))
 
+;;;; Preview hotkeys
 (defvar hanxic/personal-map
   (make-sparse-keymap)
   "Personal prefix keymap.")
@@ -930,24 +971,74 @@
 
 (define-key hanxic/personal-map (kbd "p") hanxic/personal-preview-map)
 
-(defun hanxic/preview-init ()
-  "Preview init.el in View mode."
-  (interactive)
-  (view-file user-init-file))
-(define-key hanxic/personal-preview-map (kbd "i") #'hanxic/preview-init)
+;; (defun hanxic/preview-init ()
+;;   "Preview init.el in View mode."
+;;   (interactive)
+;;   (view-file user-init-file))
+;; (define-key hanxic/personal-preview-map (kbd "i") #'hanxic/preview-init)
 
-(defun hanxic/preview-bin ()
-  "Preview ~/.bin directory."
-  (interactive)
-  (dired "~/.bin"))
-(define-key hanxic/personal-preview-map (kbd "b") #'hanxic/preview-bin)
+;; (defun hanxic/preview-bin ()
+;;   "Preview ~/.bin directory."
+;;   (interactive)
+;;   (dired "~/.bin"))
+;; (define-key hanxic/personal-preview-map (kbd "b") #'hanxic/preview-bin)
 
-(with-eval-after-load 'which-key
-  (which-key-add-key-based-replacements
-    "C-c p" "personal"
-    "C-c p p" "preview"
-    "C-c p p i" "init.el"
-    "C-c p p b" "bin"))
+(defun hanxic/preview-path (path)
+  "Preview PATH.
+If PATH is a directory, open with dired.
+If PATH is a file, open with view-file."
+  (interactive)
+  (cond
+   ((file-directory-p path)
+    (dired path))
+   ((file-regular-p path)
+    (view-file path))
+   (t
+    (user-error "Invalid preview target: %s" target))))
+
+(defun hanxic/define-preview-command (name path)
+  "Define a named preview command NAME for PATH."
+  (let ((fn-symbol (intern (format "hanxic/preview-%s" name))))
+    (fset fn-symbol
+          `(lambda ()
+             ,(format "Preview %s." path)
+             (interactive)
+             (hanxic/preview-path ,path)))
+    fn-symbol))
+
+(defvar hanxic/preview-spec
+  '(("i" init user-init-file "init.el")
+    ("b" bin "~/.bin" "bin")
+    ("r" research "~/research" "research")
+    ("p" project "~/projects" "projects")
+    ("z" zshrc "~/.zshrc" "zshrc")))
+
+(defun hanxic/install-preview-bindings ()
+  (dolist (spec hanxic/preview-spec)
+    (pcase-let ((`(,key ,name ,path ,label) spec))
+      (let ((cmd (hanxic/define-preview-command name path)))
+        ;; key binding
+        (define-key hanxic/personal-preview-map (kbd key) cmd)
+
+        ;; which-key
+        (with-eval-after-load 'which-key
+          (which-key-add-key-based-replacements
+            (concat "C-c p p " key) label))))))
+
+(hanxic/install-preview-bindings)
+
+(define-key hanxic/personal-map (kbd "t") #'vterm)
+(define-key hanxic/personal-map (kbd "T") #'multi-vterm)
+(add-hook 'vterm-mode-hook
+          (lambda ()
+            (hl-line-mode -1)))
+
+;; (with-eval-after-load 'which-key
+;;   (which-key-add-key-based-replacements
+;;     "C-c p" "personal"
+;;     "C-c p p" "preview"
+;;     "C-c p p i" "init.el"
+;;     "C-c p p b" "bin"))
 
 
 ;; (defun hanxic/evil-visual-indent-right-1 ()
@@ -1123,9 +1214,9 @@ Returns:
    '(command-log-mode company-auctex company-coq copilot csv-mode dune ef-themes
                       evil-collection evil-nerd-commenter flycheck-haskell
                       flycheck-ocaml helm-lsp helm-projectile helm-rg helpful
-                      hlint-refactor lsp-haskell lsp-ui magit nerd-icons
-                      ocamlformat org-fragtog proof-general telephone-line
-                      tuareg undo-fu web-mode yasnippet-snippets))
+                      hlint-refactor lsp-haskell lsp-ui magit multi-vterm
+                      nerd-icons ocamlformat org-fragtog proof-general
+                      telephone-line tuareg undo-fu web-mode yasnippet-snippets))
  '(safe-local-variable-values
    '((jinx-dir-local-words . "ElDoc Nael Mekeor Melire reindent")))
  '(warning-suppress-log-types '((lsp-mode))))
