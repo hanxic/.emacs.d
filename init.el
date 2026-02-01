@@ -412,6 +412,7 @@
         (assq-delete-all "Make" TeX-command-list))
   (push '("Make" "make" my/TeX-run-make-at-project-root nil t) TeX-command-list)
 
+  (setq Tex-command-default "Make")
   ;; --- 4) Conditional default command per buffer ---
   (defun my/TeX-set-default-command ()
     "If project root has Makefile, default to Make; else default to LaTeX (or LatexMk)."
