@@ -923,7 +923,9 @@
 	(add-hook 'vterm-mode-hook
 			(lambda ()
 			(setq-local evil-insert-state-cursor 'box)
-			(evil-insert-state)))
+			(evil-insert-state)
+      (setq-local global-hl-line-mode nil)
+      (hl-line-mode -1)))
 	(define-key vterm-mode-map [return]                      #'vterm-send-return)
 
 	(setq vterm-keymap-exceptions nil)
@@ -1032,9 +1034,6 @@ If PATH is a file, open with view-file."
 
 (define-key hanxic/personal-map (kbd "t") #'vterm)
 (define-key hanxic/personal-map (kbd "T") #'multi-vterm)
-(add-hook 'vterm-mode-hook
-          (lambda ()
-            (hl-line-mode -1)))
 
 ;;;; Themes
 (use-package autothemer
