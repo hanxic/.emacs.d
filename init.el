@@ -31,6 +31,14 @@
 
 ;;; Code:
 
+(defun my/apply-font (&optional frame)
+  (with-selected-frame (or frame (selected-frame))
+    (set-face-attribute 'default nil :font "Iosevka-12")))
+
+(if (daemonp)
+    (add-hook 'after-make-frame-functions #'my/apply-font)
+  (my/apply-font))
+
 (require 'server)
 (unless (server-running-p)
   (server-start))
@@ -46,6 +54,7 @@
   (package-refresh-contents))
 (unless (package-installed-p 'use-package)
   (package-install 'use-package))
+(setq use-package-compute-statistics t)
 (require 'use-package)
 (setq use-package-always-ensure t)
 
@@ -165,13 +174,13 @@
   )
 
 ;;; Icons
-(use-package nerd-icons
-  ;; :custom
-  ;; The Nerd Font you want to use in GUI
-  ;; "Symbols Nerd Font Mono" is the default and is recommended
-  ;; but you can use any other Nerd Font if you want
-  ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
-  )
+;; (use-package nerd-icons
+;;   ;; :custom
+;;   ;; The Nerd Font you want to use in GUI
+;;   ;; "Symbols Nerd Font Mono" is the default and is recommended
+;;   ;; but you can use any other Nerd Font if you want
+;;   ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
+;;   )
 
 ;;; VC mode
 (setq vc-handled-backends '(Git))
@@ -356,7 +365,11 @@
     :hook (org-mode . org-fragtog-mode))
   )
 (use-package org-tree-slide
-  :ensure t)
+  :ensure t
+  :commands org-tree-slide-mode
+  :init
+  (setq org-tree-slide-skip-outline-level 0)
+  )
 
 
 ;;; Latex
@@ -371,7 +384,7 @@
 
 (use-package tex
   :ensure auctex
-  :defer auctex
+  :after auctex
   :config
   (setq
    TeX-source-correlate-mode t
@@ -392,7 +405,7 @@
     "Run make from the project root (project.el), falling back to current dir."
     (let* ((proj (project-current nil))
            (root (when proj (project-root proj)))
-           ;; (default-directory (or root default-directory))
+           ;; (default-directoraftery (or root default-directory))
            )
       ;; (setq TeX-master ".")
       (message "proj = %s" proj)
@@ -440,7 +453,8 @@
 
 
 (use-package company-auctex
-  :defer auctex
+  :after auctex
+  :hook (LaTeX-mode . company-auctex-init)
   )
 (company-auctex-init)
 
@@ -449,21 +463,23 @@
 
 (use-package yasnippet                  ; Snippets
   :ensure t
-  :defer tex
-  :config
+  :commands yas-minor-mode
+  :hook ((prog-mode . yas-minor-mode))
+  :init
   (setq
    yas-verbosity 1                      ; No need to be so verbose
    yas-wrap-around-region t)
 
-  (with-eval-after-load 'yasnippet
-    (setq yas-snippet-dirs '(yasnippet-snippets-dir)))
+  ;; (with-eval-after-load 'yasnippet
+  ;;   (setq yas-snippet-dirs '(yasnippet-snippets-dir)))
 
-  (yas-reload-all)
-  (yas-global-mode))
+  ;; (yas-reload-all)
+  ;; (yas-global-mode))
+  )
 
 (use-package yasnippet-snippets         ; Collection of snippets
   :ensure t
-  :defer yasnippet)
+  :after yasnippet)
 
 (setq LaTeX-item-indent 0)
 (add-hook 'TeX-mode-hook 'turn-on-auto-fill)
@@ -974,9 +990,12 @@
 ;;; Terminal
 ;;;; VTerm
 (use-package vterm
-  :ensure t)
+  :ensure t
+  :commands vterm
+  )
 
 (use-package multi-vterm
+  :after vterm
 	:config
 	(add-hook 'vterm-mode-hook
 			(lambda ()
