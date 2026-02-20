@@ -31,6 +31,21 @@
 
 ;;; Code:
 
+(defun my/apply-font (&optional frame)
+  (with-selected-frame (or frame (selected-frame))
+    (set-face-attribute 'default nil :font "Iosevka-12")))
+
+(if (daemonp)
+    (add-hook 'after-make-frame-functions #'my/apply-font)
+  (my/apply-font))
+;; (set-face-attribute 'default nil :font "Iosevka-12")
+
+
+(advice-add 'require :before
+            (lambda (feature &rest _)
+              (when (eq feature 'flycheck)
+                (message "flycheck required by: %S" load-file-name))))
+
 (require 'server)
 (unless (server-running-p)
   (server-start))
@@ -46,6 +61,7 @@
   (package-refresh-contents))
 (unless (package-installed-p 'use-package)
   (package-install 'use-package))
+(setq use-package-compute-statistics t)
 (require 'use-package)
 (setq use-package-always-ensure t)
 
@@ -115,15 +131,19 @@
          ("C-c h o" . helm-occur)
          ("M-p" . helm-show-kill-ring)
 	 ("C-M-j" . helm-buffers-list))
-  :defer 1
+  ;; :defer 1
+  :init
+  ;; ;(require 'helm-config)
+  ;; (helm-mode 1)
+  ;; (helm-autoresize-mode 1)
+  ;; (require 'helm-command)
+  ;; :custom
+  (setq helm-M-x-show-short-doc t
+        helm-M-x-requires-pattern 0)
   :config
-  ;(require 'helm-config)
-  (helm-mode 1)
-  (helm-autoresize-mode 1)
-  (require 'helm-command)
-  :custom
-  (helm-M-x-show-short-doc t)
-  (helm-M-x-requires-pattern 0))
+  (global-set-key (kbd "C-h v") #'helm-describe-variable)
+  (global-set-key (kbd "C-h f") #'helm-describe-function)
+  )
 
 ;;; Projectile
 
@@ -165,13 +185,13 @@
   )
 
 ;;; Icons
-(use-package nerd-icons
-  ;; :custom
-  ;; The Nerd Font you want to use in GUI
-  ;; "Symbols Nerd Font Mono" is the default and is recommended
-  ;; but you can use any other Nerd Font if you want
-  ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
-  )
+;; (use-package nerd-icons
+;;   ;; :custom
+;;   ;; The Nerd Font you want to use in GUI
+;;   ;; "Symbols Nerd Font Mono" is the default and is recommended
+;;   ;; but you can use any other Nerd Font if you want
+;;   ;; (nerd-icons-font-family "Symbols Nerd Font Mono")
+;;   )
 
 ;;; VC mode
 (setq vc-handled-backends '(Git))
@@ -264,7 +284,10 @@
 ;; Evil-collection
 (use-package evil-collection
   :after evil
+  :init
   :config
+  (setq evil-collection-mode-list
+        (remove 'flycheck evil-collection-mode-list))
   (evil-collection-init))
 
 ;; Evil Mode Line
@@ -295,11 +318,17 @@
 ;; ;;; Checking
 (use-package flycheck
   :ensure t
-  :config
-  (global-flycheck-mode)
-  :bind (:map flycheck-mode-map
-              ("C-c C-j n" . flycheck-next-error)
-              ("C-c C-j p" . flycheck-previous-error)))
+  :hook ((prog-mode . flycheck-mode)
+         (LaTeX-mode . flycheck-mode))
+  ;; :config
+  ;; (global-flycheck-mode)
+  ;; :bind (:map flycheck-mode-map
+  ;;             ("C-c C-j n" . flycheck-next-error)
+  ;;             ("C-c C-j p" . flycheck-previous-error)))
+  )
+(with-eval-after-load 'flycheck
+  (define-key flycheck-mode-map (kbd "C-c C-j n") #'flycheck-next-error)
+  (define-key flycheck-mode-map (kbd "C-c C-j p") #'flycheck-previous-error))
 
 ;;; Undo-fu
 (use-package undo-fu
@@ -319,8 +348,6 @@
      (";;;;\\([^;].*\\)"  ;; ;;;;
       1 '(:weight bold :height 1.1 :foreground "LightSkyBlue") t))))
 (add-hook 'emacs-lisp-mode-hook 'hanxic/elisp-highlight-section)
-
-(set-face-attribute 'default nil :font "Iosevka-12")
 
 ;;; Company
 (use-package company
@@ -356,7 +383,12 @@
     :hook (org-mode . org-fragtog-mode))
   )
 (use-package org-tree-slide
-  :ensure t)
+  :ensure t
+  :commands org-tree-slide-mode
+  :init
+  (setq org-tree-slide-skip-outline-level 0
+        )
+  )
 
 
 ;;; Latex
@@ -371,7 +403,7 @@
 
 (use-package tex
   :ensure auctex
-  :defer auctex
+  :after auctex
   :config
   (setq
    TeX-source-correlate-mode t
@@ -440,30 +472,33 @@
 
 
 (use-package company-auctex
-  :defer auctex
+  :after auctex
+  :hook (LaTeX-mode . company-auctex-init)
   )
-(company-auctex-init)
+;; (company-auctex-init)
 
-(add-hook 'TeX-mode-hook
-	  'company-mode)
+;; (add-hook 'TeX-mode-hook
+;; 	  'company-mode)
 
 (use-package yasnippet                  ; Snippets
   :ensure t
-  :defer tex
-  :config
+  :commands yas-minor-mode
+  :hook ((prog-mode . yas-minor-mode))
+  :init
   (setq
    yas-verbosity 1                      ; No need to be so verbose
    yas-wrap-around-region t)
 
-  (with-eval-after-load 'yasnippet
-    (setq yas-snippet-dirs '(yasnippet-snippets-dir)))
+  ;; (with-eval-after-load 'yasnippet
+  ;;   (setq yas-snippet-dirs '(yasnippet-snippets-dir)))
 
-  (yas-reload-all)
-  (yas-global-mode))
+  ;; (yas-reload-all)
+  ;; (yas-global-mode)
+  )
 
 (use-package yasnippet-snippets         ; Collection of snippets
   :ensure t
-  :defer yasnippet)
+  :after yasnippet)
 
 (setq LaTeX-item-indent 0)
 (add-hook 'TeX-mode-hook 'turn-on-auto-fill)
@@ -613,9 +648,12 @@
 ;; OCaml format
 (use-package ocamlformat
   :ensure t
-  )
-(add-hook 'tuareg-mode-hook (lambda ()
-  (define-key tuareg-mode-map (kbd "C-M-<tab>") #'ocamlformat)))
+  :hook
+  (tuareg-mode
+   . (lambda ()
+  (define-key tuareg-mode-map (kbd "C-M-<tab>") #'ocamlformat))))
+;; (add-hook 'tuareg-mode-hook (lambda ()
+;;   (define-key tuareg-mode-map (kbd "C-M-<tab>") #'ocamlformat)))
 
 (defun chomp (str)
       "Chomp leading and tailing whitespace from STR."
@@ -725,7 +763,8 @@
 
 ;; Major mode for editing Dune project files
 (use-package dune
-  :ensure t)
+  :ensure t
+  :mode ("dune\\'" . dune-mode))
 
 ;; Merlin provides advanced IDE features
 (use-package merlin
@@ -751,13 +790,18 @@
 ;; This uses Merlin internally
 (use-package flycheck-ocaml
   :ensure t
-  :config
-  (add-hook 'tuareg-mode-hook
-            (lambda ()
-              ;; disable Merlin's own error checking
-              (setq-local merlin-error-after-save nil)
-              ;; enable Flycheck checker
-             (flycheck-ocaml-setup))))
+  :after flycheck
+  :hook
+  (tuareg-mode . (lambda ()
+                   (setq-local merlin-error-after-save nil)
+                   (flycheck-ocaml-setup))))
+  ;; :config
+  ;; (add-hook 'tuareg-mode-hook
+  ;;           (lambda ()
+  ;;             ;; disable Merlin's own error checking
+  ;;             (setq-local merlin-error-after-save nil)
+  ;;             ;; enable Flycheck checker
+  ;;            (flycheck-ocaml-setup))))
 
 (let ((opam-share (ignore-errors (car (process-lines "opam" "var" "share")))))
   (when (and opam-share (file-directory-p opam-share))
@@ -969,14 +1013,21 @@
 ;;   "Use make if a Makefile exists, otherwise use LaTeX"
 
 ;;;; CSV Mode
-(use-package csv-mode)
+(use-package csv-mode
+  :ensure t
+  :mode ("\\.csv\\'" . csv-mode)
+  )
 
 ;;; Terminal
 ;;;; VTerm
 (use-package vterm
-  :ensure t)
+  :ensure t
+  :commands vterm
+  
+  )
 
 (use-package multi-vterm
+  :after vterm
 	:config
 	(add-hook 'vterm-mode-hook
 			(lambda ()
@@ -1011,7 +1062,8 @@
 	(evil-define-key 'normal vterm-mode-map (kbd ",>")       #'multi-vterm-prev)
 	(evil-define-key 'normal vterm-mode-map (kbd "i")        #'evil-insert-resume)
 	(evil-define-key 'normal vterm-mode-map (kbd "o")        #'evil-insert-resume)
-	(evil-define-key 'normal vterm-mode-map (kbd "<return>") #'evil-insert-resume))
+	(evil-define-key 'normal vterm-mode-map (kbd "<return>") #'evil-insert-resume)
+  )
 
 ;;; Customization
 ;;;; Dired
@@ -1268,6 +1320,58 @@ Returns:
 (define-key evil-normal-state-map (kbd "C-<tab>") hanxic-indent-keymap)
 (define-key evil-visual-state-map (kbd "C-<tab>") hanxic-indent-keymap)
 
+;; (require 'cl-lib)
+
+;; (defun my/frame-has-modified-file-buffers-p (&optional frame)
+;;   (cl-some (lambda (buf)
+;;              (with-current-buffer buf
+;;                (and buffer-file-name
+;;                     (buffer-modified-p)
+;;                     ;; Ignore buffers that aren’t shown anywhere if you want:
+;;                     ;; (get-buffer-window buf frame)
+;;                     )))
+;;            (buffer-list)))
+
+;; (defun my/close-frame-prompt-save (&optional frame)
+;;   "Close FRAME (or selected frame). If there are modified file buffers,
+;; prompt once: save all, discard, or cancel. Keeps daemon alive."
+;;   (interactive)
+;;   (let ((frame (or frame (selected-frame))))
+;;     (if (my/frame-has-modified-file-buffers-p frame)
+;;         (pcase (read-char-choice
+;;                 "Modified files. [s] Save all & close  [d] Discard & close  [c] Cancel: "
+;;                 '(?s ?d ?c))
+;;           (?s
+;;            ;; Save all modified file buffers without per-buffer prompting
+;;            (save-some-buffers t (lambda () buffer-file-name))
+;;            (delete-frame frame t))
+;;           (?d
+;;            ;; Discard changes in all modified file buffers
+;;            (save-some-buffers t (lambda ()
+;;                                   (when buffer-file-name
+;;                                     (set-buffer-modified-p nil)
+;;                                     nil)))
+;;            (delete-frame frame t))
+;;           (?c
+;;            (message "Canceled.")))
+;;       ;; No modified files → just close
+;;       (delete-frame frame t))))
+
+;; ;; Bind for daemon sessions (so ⌘W doesn’t kill daemon, but still prompts)
+;; (when (daemonp)
+;;   (global-set-key (kbd "s-w") #'my/close-frame-prompt-save)
+;;   ;; Optional: make ⌘Q also just close the frame safely
+;;   (global-set-key (kbd "s-q") #'my/close-frame-prompt-save))
+(defun my/close-frame-like-quit ()
+  "Close current frame, prompting to save buffers like normal quit."
+  (interactive)
+  (when (save-some-buffers nil nil)  ;; per-buffer prompting
+    (delete-frame nil t)))           ;; force close frame
+(when (daemonp)
+  (global-set-key (kbd "s-w") #'my/close-frame-like-quit)
+  )
+
+
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -1295,6 +1399,7 @@ Returns:
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
  '(merlin-type-face ((t (:background "#46484f")))))
+
 
 (provide 'init)
 ;;; init.el ends here
