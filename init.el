@@ -338,7 +338,7 @@
   (setq company-idle-delay 1))
 
 ;;; Org mode
-(add-to-list 'load-path user-emacs-directory)
+(add-to-list 'load-path (concat user-emacs-directory "lisp"))
 (require 'org-setup)
 
 
@@ -1000,10 +1000,10 @@
   (define-key dired-mode-map "?" #'dired-summary)
   (define-key dired-mode-map (kbd "C-c +") #'dired-create-empty-file)
   )
-(add-hook 'dired-mode-hook
-          (lambda ()
-            (setq-local buffer-read-only t)
-            (rename-buffer (concat " " (buffer-name)) t)))
+;; (add-hook 'dired-mode-hook
+;;           (lambda ()
+;;             (setq-local buffer-read-only t)
+;;             (rename-buffer (concat " " (buffer-name)) t)))
 
 
 ;;;; Preview hotkeys
