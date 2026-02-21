@@ -338,37 +338,8 @@
   (setq company-idle-delay 1))
 
 ;;; Org mode
-;; (add-hook 'org-mode-hook #'turn-on-auto-fill)
-;; (setq-default fill-column 80)
-(use-package org
-  :init
-  (setq-default fill-column 80)
-  :hook (org-mode . visual-line-mode)
-  :custom
-  (org-highlight-latex-and-related '(latex))
-  (org-use-sub-superscripts '{})
-  (org-export-with-LaTeX-fragments t)
-  (org-latex-create formula-image-program 'dvipng)
-  (org-hide-emphasis-markers t)
-  :config
-  (setq org-format-latex-options
-      '(:foreground "Black"
-        :background "White"
-        :scale 1.2           ; increase this to make math bigger
-        :html-foreground "Black"
-        :html-background "White"
-        :html-scale 1.5
-        :matchers ("begin" "$1" "$" "\\(" "\\[")))
-  (use-package org-fragtog
-    :ensure t
-    :hook (org-mode . org-fragtog-mode))
-  )
-(use-package org-tree-slide
-  :ensure t
-  :commands org-tree-slide-mode
-  :init
-  (setq org-tree-slide-skip-outline-level 0)
-  )
+(add-to-list 'load-path user-emacs-directory)
+(require 'org-setup)
 
 
 ;;; Latex
@@ -620,9 +591,10 @@
 (mapc #'(lambda (ext) (add-to-list 'completion-ignored-extensions ext))
   '(".aux" ".vo" ".cmo" ".cmx" ".cma" ".cmxa" ".cmi" ".cmxs" ".cmt" ".annot" ".byte" ".native"))
 
-;; OCaml format
+;;; OCaml format
 (use-package ocamlformat
   :ensure t
+  :defer t
   :hook
   (tuareg-mode
    . (lambda ()
@@ -1028,6 +1000,10 @@
   (define-key dired-mode-map "?" #'dired-summary)
   (define-key dired-mode-map (kbd "C-c +") #'dired-create-empty-file)
   )
+(add-hook 'dired-mode-hook
+          (lambda ()
+            (setq-local buffer-read-only t)
+            (rename-buffer (concat " " (buffer-name)) t)))
 
 
 ;;;; Preview hotkeys
