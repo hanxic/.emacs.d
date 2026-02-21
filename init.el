@@ -376,17 +376,9 @@
 (use-package auctex
   :ensure t
   :defer t
-  :mode ("\\.tex\\'" . latex-mode))
-(dolist (hook '(text-mode-hook ))
-  (add-hook hook (lambda () (flyspell-mode 1))))
-(dolist (hook '(change-log-mode-hook log-edit-mode-hook))
-  (add-hook hook (lambda () (flyspell-mode -1))))
-
-(use-package tex
-  :ensure auctex
-  :after auctex
+  :mode ("\\.tex\\'" . latex-mode)
   :config
-  (setq
+    (setq
    TeX-source-correlate-mode t
    TeX-source-correlate-start-server t
    TeX-command-extra-options "-synctex=1"
@@ -395,7 +387,27 @@
    TeX-show-compilation t
    TeX-scroll-buffer t
    )
-  ) 
+
+  )
+(dolist (hook '(text-mode-hook ))
+  (add-hook hook (lambda () (flyspell-mode 1))))
+(dolist (hook '(change-log-mode-hook log-edit-mode-hook))
+  (add-hook hook (lambda () (flyspell-mode -1))))
+
+;; (use-package tex
+;;   :ensure auctex
+;;   :after auctex
+;;   :config
+;;   (setq
+;;    TeX-source-correlate-mode t
+;;    TeX-source-correlate-start-server t
+;;    TeX-command-extra-options "-synctex=1"
+;;    TeX-view-program-selection '((output-pdf "Skim"))
+;;    TeX-view-program-list '(("Skim" "/Applications/Skim.app/Contents/SharedSupport/displayline -b -g %n %o %b"))
+;;    TeX-show-compilation t
+;;    TeX-scroll-buffer t
+;;    )
+;;   ) 
 
 (require 'project)
 
@@ -741,20 +753,27 @@
 
 ;; Major mode for editing Dune project files
 (use-package dune
-  :ensure t)
+  :ensure t
+  :mode ("dune\\'" . dune-mode)
+  )
 
 ;; Merlin provides advanced IDE features
 (use-package merlin
   ;; :after company
   :ensure t
-  :config
-  (add-hook 'tuareg-mode-hook #'merlin-mode)
-  (add-hook 'merlin-mode-hook #'company-mode)
+  :defer t
+  :hook ((tuareg-mode . merlin-mode)
+         (merlin-mode . company-mode))
+  :init
+  ;; (add-hook 'tuareg-mode-hook #'merlin-mode)
+  ;; (add-hook 'merlin-mode-hook #'company-mode)
   ;; we're using flycheck instead
   (setq merlin-error-after-save nil)
-  (custom-set-faces
- '(merlin-type-face ((t (:background "#46484f"))))
- ))
+  :custom-face
+  (merlin-type-face ((t (:background "#46484f")))))
+ ;;  (custom-set-faces
+ ;; '(merlin-type-face ((t (:background "#46484f"))))
+ ;; ))
 (add-to-list 'auto-mode-alist '("\\.mlg$"      . tuareg-mode) t)
 ;; (custom-set-faces
 ;;  '(merlin-type-face ((t (:background "#46484f"))))
@@ -765,15 +784,29 @@
 ;;   :hook ((tuareg-mode) . merlin-eldoc-setup))
 
 ;; This uses Merlin internally
+(defun hanxic/flycheck-ocaml-setup ()
+  ;; disable Merlin's own error checking
+  (setq-local merlin-error-after-save nil)
+  ;; enable Flycheck OCaml integration
+  (flycheck-ocaml-setup))
+
 (use-package flycheck-ocaml
   :ensure t
-  :config
-  (add-hook 'tuareg-mode-hook
-            (lambda ()
-              ;; disable Merlin's own error checking
-              (setq-local merlin-error-after-save nil)
-              ;; enable Flycheck checker
-             (flycheck-ocaml-setup))))
+  :defer t
+  :hook ((ocaml-mode . hanxic/flycheck-ocaml-setup)
+         (tuareg-mode . hanxic/flycheck-ocaml-setup)))
+
+;; (use-package flycheck-ocaml
+;;   :ensure t
+;;   :after (flycheck ocaml)
+;;   :hook (ocaml-mode . flycheck-ocaml-setup)
+;;   :config
+;;   (add-hook 'tuareg-mode-hook
+;;             (lambda ()
+;;               ;; disable Merlin's own error checking
+;;               (setq-local merlin-error-after-save nil)
+;;               ;; enable Flycheck checker
+;;              (flycheck-ocaml-setup))))
 
 (let ((opam-share (ignore-errors (car (process-lines "opam" "var" "share")))))
   (when (and opam-share (file-directory-p opam-share))
@@ -985,7 +1018,10 @@
 ;;   "Use make if a Makefile exists, otherwise use LaTeX"
 
 ;;;; CSV Mode
-(use-package csv-mode)
+(use-package csv-mode
+  :ensure t
+  :mode ("\\.csv\\'" . csv-mode)
+  )
 
 ;;; Terminal
 ;;;; VTerm
