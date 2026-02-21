@@ -38,13 +38,6 @@
 (if (daemonp)
     (add-hook 'after-make-frame-functions #'my/apply-font)
   (my/apply-font))
-;; (set-face-attribute 'default nil :font "Iosevka-12")
-
-
-(advice-add 'require :before
-            (lambda (feature &rest _)
-              (when (eq feature 'flycheck)
-                (message "flycheck required by: %S" load-file-name))))
 
 (require 'server)
 (unless (server-running-p)
@@ -386,8 +379,7 @@
   :ensure t
   :commands org-tree-slide-mode
   :init
-  (setq org-tree-slide-skip-outline-level 0
-        )
+  (setq org-tree-slide-skip-outline-level 0)
   )
 
 
@@ -395,17 +387,9 @@
 (use-package auctex
   :ensure t
   :defer t
-  :mode ("\\.tex\\'" . latex-mode))
-(dolist (hook '(text-mode-hook ))
-  (add-hook hook (lambda () (flyspell-mode 1))))
-(dolist (hook '(change-log-mode-hook log-edit-mode-hook))
-  (add-hook hook (lambda () (flyspell-mode -1))))
-
-(use-package tex
-  :ensure auctex
-  :after auctex
+  :mode ("\\.tex\\'" . latex-mode)
   :config
-  (setq
+    (setq
    TeX-source-correlate-mode t
    TeX-source-correlate-start-server t
    TeX-command-extra-options "-synctex=1"
@@ -414,7 +398,27 @@
    TeX-show-compilation t
    TeX-scroll-buffer t
    )
-  ) 
+
+  )
+(dolist (hook '(text-mode-hook ))
+  (add-hook hook (lambda () (flyspell-mode 1))))
+(dolist (hook '(change-log-mode-hook log-edit-mode-hook))
+  (add-hook hook (lambda () (flyspell-mode -1))))
+
+;; (use-package tex
+;;   :ensure auctex
+;;   :after auctex
+;;   :config
+;;   (setq
+;;    TeX-source-correlate-mode t
+;;    TeX-source-correlate-start-server t
+;;    TeX-command-extra-options "-synctex=1"
+;;    TeX-view-program-selection '((output-pdf "Skim"))
+;;    TeX-view-program-list '(("Skim" "/Applications/Skim.app/Contents/SharedSupport/displayline -b -g %n %o %b"))
+;;    TeX-show-compilation t
+;;    TeX-scroll-buffer t
+;;    )
+;;   ) 
 
 (require 'project)
 
@@ -424,7 +428,7 @@
     "Run make from the project root (project.el), falling back to current dir."
     (let* ((proj (project-current nil))
            (root (when proj (project-root proj)))
-           ;; (default-directory (or root default-directory))
+           ;; (default-directoraftery (or root default-directory))
            )
       ;; (setq TeX-master ".")
       (message "proj = %s" proj)
@@ -770,14 +774,19 @@
 (use-package merlin
   ;; :after company
   :ensure t
-  :config
-  (add-hook 'tuareg-mode-hook #'merlin-mode)
-  (add-hook 'merlin-mode-hook #'company-mode)
+  :defer t
+  :hook ((tuareg-mode . merlin-mode)
+         (merlin-mode . company-mode))
+  :init
+  ;; (add-hook 'tuareg-mode-hook #'merlin-mode)
+  ;; (add-hook 'merlin-mode-hook #'company-mode)
   ;; we're using flycheck instead
   (setq merlin-error-after-save nil)
-  (custom-set-faces
- '(merlin-type-face ((t (:background "#46484f"))))
- ))
+  :custom-face
+  (merlin-type-face ((t (:background "#46484f")))))
+ ;;  (custom-set-faces
+ ;; '(merlin-type-face ((t (:background "#46484f"))))
+ ;; ))
 (add-to-list 'auto-mode-alist '("\\.mlg$"      . tuareg-mode) t)
 ;; (custom-set-faces
 ;;  '(merlin-type-face ((t (:background "#46484f"))))
@@ -788,6 +797,12 @@
 ;;   :hook ((tuareg-mode) . merlin-eldoc-setup))
 
 ;; This uses Merlin internally
+(defun hanxic/flycheck-ocaml-setup ()
+  ;; disable Merlin's own error checking
+  (setq-local merlin-error-after-save nil)
+  ;; enable Flycheck OCaml integration
+  (flycheck-ocaml-setup))
+
 (use-package flycheck-ocaml
   :ensure t
   :after flycheck
@@ -1023,7 +1038,6 @@
 (use-package vterm
   :ensure t
   :commands vterm
-  
   )
 
 (use-package multi-vterm
