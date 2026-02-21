@@ -1,6 +1,4 @@
-;; -*- lexical-binding: t; -*-
-
-;;; Package -- summary
+;;; Package -- summary  -*- lexical-binding: t; -*-
 ;; Packeages that I want to install
 ;; use-package
 ;; display line number (functionality)
@@ -1000,10 +998,20 @@
   (define-key dired-mode-map "?" #'dired-summary)
   (define-key dired-mode-map (kbd "C-c +") #'dired-create-empty-file)
   )
-;; (add-hook 'dired-mode-hook
-;;           (lambda ()
-;;             (setq-local buffer-read-only t)
-;;             (rename-buffer (concat " " (buffer-name)) t)))
+
+  (defun hanxic/hide-dired-from-helm (orig-fn &rest args)
+    "Filter out dired buffers from helm-mini."
+    (let ((helm-boring-buffer-regexp-list
+           (append helm-boring-buffer-regexp-list
+                   (mapcar (lambda (b)
+                             (concat "\\`" (regexp-quote (buffer-name b)) "\\'"))
+                           (seq-filter (lambda (b)
+                                         (with-current-buffer b
+                                           (derived-mode-p 'dired-mode)))
+                                       (buffer-list))))))
+      (apply orig-fn args)))
+
+  (advice-add 'helm-mini :around #'hanxic/hide-dired-from-helm)
 
 
 ;;;; Preview hotkeys
