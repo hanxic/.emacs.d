@@ -29,6 +29,13 @@
 
 ;;; Code:
 
+(defvar hanxic/personal-map
+  (make-sparse-keymap)
+  "Personal prefix keymap.")
+
+(global-set-key (kbd "C-c p") hanxic/personal-map)
+
+
 (defun my/apply-font (&optional frame)
   (with-selected-frame (or frame (selected-frame))
     (set-face-attribute 'default nil :font "Iosevka-12")))
@@ -99,8 +106,11 @@
 (put'upcase-region 'disabled nil)
 
 ;; Command log mode for showing the event history
-(use-package command-log-mode
-  :defer 10)
+;; (use-package command-log-mode
+;;   :bind (("C-c p c" . clm/toggle-command-log-buffer))
+;;   :config
+;;   (global-unset-key (kbd "C-c o"))
+;;   )
 
 ;;; Self-defined functions
 (defun hanxic/indent-for-tab-command ()
@@ -121,7 +131,7 @@
          ("C-x C-f" . helm-find-files)
          ("C-c h o" . helm-occur)
          ("M-p" . helm-show-kill-ring)
-	 ("C-M-j" . helm-buffers-list))
+	       ("C-M-j" . helm-buffers-list))
   :defer 1
   :config
   ;(require 'helm-config)
@@ -142,15 +152,21 @@
 	projectile-indexing-method 'alien)
   )
 
+(defvar hanxic/personal-helm-map
+  (make-sparse-keymap)
+  "Personal preview commands.")
+
+(define-key hanxic/personal-map (kbd "h") hanxic/personal-helm-map)
+
 (use-package helm-projectile
   :ensure t
   :commands (helm-projectile helm-projectile-switch-project helm-projectile-ag helm-projectile-rg helm-projectile-grep)
-  :bind (("C-c p h" . helm-projectile)
-         ("C-c p p" . helm-projectile-switch-project)
-         ("C-c p r" . helm-projectile-rg)
-         ("C-c p a" . helm-projectile-ag)
-         ("C-c p g" . helm-projectile-grep)
-         ("C-c p o" . helm-projectile-find-other-file))
+  :bind (("C-c p h h" . helm-projectile)
+         ("C-c p h p" . helm-projectile-switch-project)
+         ("C-c p h r" . helm-projectile-rg)
+         ("C-c p h a" . helm-projectile-ag)
+         ("C-c p h g" . helm-projectile-grep)
+         ("C-c p h o" . helm-projectile-find-other-file))
   :config
   (helm-projectile-on))
 
@@ -1031,12 +1047,6 @@
   (advice-add 'helm-mini :around #'hanxic/hide-buffers-from-helm)
 
 ;;;; Preview hotkeys
-(defvar hanxic/personal-map
-  (make-sparse-keymap)
-  "Personal prefix keymap.")
-
-(global-set-key (kbd "C-c p") hanxic/personal-map)
-
 (defvar hanxic/personal-preview-map
   (make-sparse-keymap)
   "Personal preview commands.")
@@ -1289,7 +1299,7 @@ Returns:
      "10d44b43eb420d1dc019700cdec828ed9d0e8aeab130083f413040881d9453ca" default))
  '(helm-minibuffer-history-key "M-p")
  '(package-selected-packages
-   '(autothemer command-log-mode company-auctex company-coq copilot csv-mode dune
+   '(autothemer company-auctex company-coq copilot csv-mode dune
                 ef-themes evil-collection evil-nerd-commenter flycheck-haskell
                 flycheck-ocaml helm-lsp helm-projectile helm-rg helpful
                 hlint-refactor lsp-haskell lsp-ui magit multi-vterm
