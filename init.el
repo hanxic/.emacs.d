@@ -999,20 +999,36 @@
   (define-key dired-mode-map (kbd "C-c +") #'dired-create-empty-file)
   )
 
-  (defun hanxic/hide-dired-from-helm (orig-fn &rest args)
-    "Filter out dired buffers from helm-mini."
+  ;; (defun hanxic/hide-buffers-from-helm (orig-fn &rest args)
+  ;;   "Filter out dired and magit buffers from helm-mini."
+  ;;   (let ((helm-boring-buffer-regexp-list
+  ;;          (append helm-boring-buffer-regexp-list
+  ;;                  (mapcar (lambda (b)
+  ;;                            (concat "\\`" (regexp-quote (buffer-name b)) "\\'"))
+  ;;                          (seq-filter (lambda (b)
+  ;;                                        (with-current-buffer b
+  ;;                                          (or (derived-mode-p 'dired-mode)
+  ;;                                              (derived-mode-p 'magit-mode))))
+  ;;                                      (buffer-list))))))
+  ;;     (apply orig-fn args)))
+
+;; (advice-add 'helm-mini :around #'hanxic/hide-buffers-from-helm)
+(defvar hanxic/helm-hidden-modes '(dired-mode magit-mode)
+    "Major modes to hide from `helm-mini'.")
+
+  (defun hanxic/hide-buffers-from-helm (orig-fn &rest args)
+    "Filter out buffers whose major mode derives from `hanxic/helm-hidden-modes'."
     (let ((helm-boring-buffer-regexp-list
            (append helm-boring-buffer-regexp-list
                    (mapcar (lambda (b)
                              (concat "\\`" (regexp-quote (buffer-name b)) "\\'"))
                            (seq-filter (lambda (b)
                                          (with-current-buffer b
-                                           (derived-mode-p 'dired-mode)))
+                                           (apply #'derived-mode-p hanxic/helm-hidden-modes)))
                                        (buffer-list))))))
       (apply orig-fn args)))
 
-  (advice-add 'helm-mini :around #'hanxic/hide-dired-from-helm)
-
+  (advice-add 'helm-mini :around #'hanxic/hide-buffers-from-helm)
 
 ;;;; Preview hotkeys
 (defvar hanxic/personal-map
