@@ -34,6 +34,22 @@
     :ensure t
     :hook (org-mode . org-fragtog-mode))
   )
+
+(defvar hanxic/org-agenda-normal-keys
+  '(("TAB" . org-agenda-goto)
+    ("RET" . org-agenda-switch-to)
+    ("+" . org-agenda-priority-up)
+    ("-" . org-agenda-priority-down)
+    ("d" . org-agenda-day-view)
+    ("w" . org-agenda-week-view)
+    ))
+
+(with-eval-after-load 'org-agenda
+  (evil-set-initial-state 'org-agenda-mode 'normal)
+  (dolist (binding hanxic/org-agenda-normal-keys)
+    (evil-define-key 'normal org-agenda-mode-map
+      (kbd (car binding)) (cdr binding))))
+
 (use-package org-tree-slide
   :ensure t
   :after org
@@ -238,8 +254,10 @@
                      (let ((label (completing-read "Priority: " (mapcar #'car hanxic/org-priority-alist) nil t)))
                        (cdr (assoc label hanxic/org-priority-alist)))))
          ;; Target date (only for todo sections)
-         (target (when has-todo
-                   (read-string "Target date (e.g. [2025-03-01], empty to skip): ")))
+           (schedule-date (when has-todo
+                   (read-string "Start date (e.g. 2025-03-01, empty to skip): ")))
+           (deadline-date (when has-todo
+                            (read-string "Deadline (e.g. 2025-03-01, empty to skip): ")))
          ;; Linked file
          (create-file (y-or-n-p "Create linked file? "))
          (slug (hanxic/org--slugify title))
@@ -250,8 +268,10 @@
       (make-directory (concat project-dir subdir "/") t)
       (with-temp-file linked-file
         (insert (format "#+TITLE: %s\n#+PROJECT: %s\n#+CREATED: %s\n" title project-slug created))
-        (when (and target (not (string-empty-p target)))
-          (insert (format "#+TARGET: %s\n" target)))
+        (when (and schedule-date (not (string-empty-p schedule-date)))
+          (insert (format "SCHEDULED: <%s>\n" schedule-date)))
+        (when (and deadline-date (not (string-empty-p deadline-date)))
+          (insert (format "DEADLINE: <%s>\n" deadline-date)))
         (when types-str
           (insert (format "#+TYPES: %s\n" types-str)))
         (insert "\n")))
@@ -654,10 +674,21 @@
 
 (setq org-agenda-custom-commands
       `(("g" "GTD Review"
-         ((agenda "" ((org-agenda-span 'day)))
-          (alltodo ""
-                   ((org-agenda-overriding-header "All Tasks by Priority")
-                    (org-agenda-sorting-strategy '(priority-down category-up))))))
+         ((agenda "" ((org-agenda-span 'week)
+                      (org-deadline-warning-days 7)
+                      (org-agenda-overriding-header "Schedule")))
+          (todo "NEXT"
+                ((org-agenda-overriding-header "Next Actions")
+                 (org-agenda-sorting-strategy '(priority-down category-up))))
+          (todo "IN-PROGRESS"
+                ((org-agenda-overriding-header "In Progress")
+                 (org-agenda-sorting-strategy '(priority-down category-up))))
+          (todo "WAITING"
+                ((org-agenda-overriding-header "Waiting On")
+                 (org-agenda-sorting-strategy '(category-up))))
+          (todo "TODO"
+                ((org-agenda-overriding-header "Backlog")
+                 (org-agenda-sorting-strategy '(priority-down category-up))))))
         ("i" "Inbox"
          ((alltodo ""
                    ((org-agenda-files ,(list hanxic/org-inbox-file))
@@ -665,6 +696,158 @@
 
 (setq org-todo-keywords
       '((sequence "TODO(t)" "NEXT(n)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))
+
+;;;; ── Dependencies ────────────────────────────────────
+(require 'org-id)
+
+;;;; ── Dependencies ───────────────────────────────────────
+
+(defun hanxic/org-set-dependency ()
+  "Add a BLOCKER dependency on the entry at point.
+  Prompts to select a task from the same project."
+  (interactive)
+  (let* ((ctx (hanxic/org--resolve-project-context))
+         (project-slug (car ctx))
+         (master-file (concat hanxic/org-projects-directory project-slug "/" project-slug ".org"))
+         ;; Collect all task headings from the project
+         (tasks (mapcar #'car (hanxic/org--extract-entries master-file "Tasks")))
+         (current (org-get-heading t t t t))
+         ;; Remove current task from choices
+         (choices (seq-remove (lambda (t_) (string= t_ current)) tasks))
+         (blocker (completing-read "Blocked by: " choices nil t))
+         (existing (org-entry-get nil "BLOCKER")))
+    (org-set-property "BLOCKER"
+                      (if (and existing (not (string-empty-p existing)))
+                          (concat existing ", " blocker)
+                        blocker))
+    (save-buffer)
+    (message "Added blocker: %s" blocker)))
+
+(defun hanxic/org-remove-dependency ()
+  "Remove a BLOCKER dependency from the entry at point."
+  (interactive)
+  (let* ((existing (org-entry-get nil "BLOCKER")))
+    (if (or (null existing) (string-empty-p existing))
+        (message "No blockers on this entry")
+      (let* ((blockers (split-string existing ", "))
+             (to-remove (completing-read "Remove blocker: " blockers nil t))
+             (remaining (seq-remove (lambda (b) (string= b to-remove)) blockers))
+             (new-val (string-join remaining ", ")))
+        (if (string-empty-p new-val)
+            (org-delete-property "BLOCKER")
+          (org-set-property "BLOCKER" new-val))
+        (save-buffer)
+        (message "Removed blocker: %s" to-remove)))))
+
+(defun hanxic/org--entry-blocked-p ()
+  "Return non-nil if the entry at point has unfinished blockers."
+  (let ((blockers (org-entry-get nil "BLOCKER")))
+    (when (and blockers (not (string-empty-p blockers)))
+      (let* ((blocker-list (split-string blockers ", "))
+             (ctx (hanxic/org--resolve-project-context))
+             (project-slug (car ctx))
+             (master-file (concat hanxic/org-projects-directory project-slug "/" project-slug ".org"))
+             (tasks (hanxic/org--extract-entries master-file "Tasks")))
+        ;; Check if any blocker is not DONE/CANCELLED
+        (seq-some (lambda (b)
+                    (let ((entry (seq-find (lambda (t_)
+                                             (string-match-p (regexp-quote b) (car t_)))
+                                           tasks)))
+                      (when entry
+                        (not (string-match "^\\(DONE\\|CANCELLED\\)" (car entry))))))
+                  blocker-list)))))
+
+;;;; ── Scheduling helpers ─────────────────────────────────
+
+(defun hanxic/org-agenda-set-types ()
+  "Set TYPES on the agenda entry at point."
+  (interactive)
+  (org-agenda-check-no-diary)
+  (let* ((marker (or (org-get-at-bol 'org-marker)
+                     (org-agenda-error)))
+         (buf (marker-buffer marker))
+         (pos (marker-position marker)))
+    (with-current-buffer buf
+      (goto-char pos)
+      (let* ((ctx (hanxic/org--resolve-project-context))
+             (project-slug (car ctx))
+             (available-types (hanxic/org--read-project-task-types project-slug))
+             (selected (when available-types
+                         (completing-read-multiple
+                          (format "Types (%s): " (string-join available-types " | "))
+                          available-types)))
+             (types-str (when selected (string-join selected " "))))
+        (when types-str
+          (org-set-property "TYPES" types-str)
+          (save-buffer))))
+    (org-agenda-redo)))
+
+(defun hanxic/org-agenda-set-dependency ()
+  "Set BLOCKER on the agenda entry at point."
+  (interactive)
+  (org-agenda-check-no-diary)
+  (let* ((marker (or (org-get-at-bol 'org-marker)
+                     (org-agenda-error)))
+         (buf (marker-buffer marker))
+         (pos (marker-position marker)))
+    (with-current-buffer buf
+      (goto-char pos)
+      (hanxic/org-set-dependency))
+    (org-agenda-redo)))
+
+(defun hanxic/org-agenda-remove-dependency ()
+  "Remove BLOCKER on the agenda entry at point."
+  (interactive)
+  (org-agenda-check-no-diary)
+  (let* ((marker (or (org-get-at-bol 'org-marker)
+                     (org-agenda-error)))
+         (buf (marker-buffer marker))
+         (pos (marker-position marker)))
+    (with-current-buffer buf
+      (goto-char pos)
+      (hanxic/org-remove-dependency))
+    (org-agenda-redo)))
+
+;;;; ── Agenda views ───────────────────────────────────────
+
+(setq org-agenda-custom-commands
+      `(("d" "Daily Schedule"
+         ((agenda "" ((org-agenda-span 'day)
+                      (org-agenda-start-on-weekday nil)
+                      (org-deadline-warning-days 7)))))
+
+        ("g" "GTD Review"
+         ((agenda "" ((org-agenda-span 'day)
+                      (org-deadline-warning-days 3)))
+          (todo "NEXT"
+                ((org-agenda-overriding-header "Next Actions")
+                 (org-agenda-sorting-strategy '(priority-down category-up))))
+          (todo "IN-PROGRESS"
+                ((org-agenda-overriding-header "In Progress")
+                 (org-agenda-sorting-strategy '(priority-down category-up))))
+          (todo "WAITING"
+                ((org-agenda-overriding-header "Waiting On")
+                 (org-agenda-sorting-strategy '(category-up))))
+          (todo "TODO"
+                ((org-agenda-overriding-header "Backlog")
+                 (org-agenda-sorting-strategy '(priority-down category-up))))))
+
+        ("p" "By Project"
+         ((alltodo ""
+                   ((org-agenda-overriding-header "Tasks by Project")
+                    (org-agenda-sorting-strategy '(category-up todo-state-up priority-down))
+                    (org-agenda-prefix-format " %c | %(org-entry-get nil \"CREATED\") |")))))
+
+        ("b" "Blocked Tasks"
+         ((tags "BLOCKER<>\"\""
+                ((org-agenda-overriding-header "Tasks with Dependencies")
+                 (org-agenda-sorting-strategy '(category-up priority-down))))))
+
+        ("i" "Inbox"
+         ((alltodo ""
+                   ((org-agenda-files ,(list hanxic/org-inbox-file))
+                    (org-agenda-overriding-header "Unprocessed Inbox")))))))
+
 
 (provide 'org-setup)
 ;;; org-setup.el ends here

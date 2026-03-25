@@ -184,7 +184,7 @@
   ;; (setq ef-themes-mixed-fonts nil
   ;; 	ef-themes-variable-pitch-ui t)
   ;; (mapc #'disable-theme custom-enabled-themes)
-  (ef-themes-select 'ef-winter)
+  (ef-themes-select 'ef-summer)
   )
 
 ;;; VC mode
@@ -1109,6 +1109,75 @@ If PATH is a file, open with view-file."
 
 (hanxic/install-preview-bindings)
 
+(defun hanxic/open-in-finder ()
+  "Open the current directory in macOS Finder.
+In dired, open the dired directory. In a file buffer, open the
+file's parent directory. Otherwise, open `default-directory'."
+  (interactive)
+  (let ((dir (cond
+              ((derived-mode-p 'dired-mode)
+               (dired-current-directory))
+              (buffer-file-name
+               (file-name-directory buffer-file-name))
+              (t default-directory))))
+    (start-process "finder" nil "open" (expand-file-name dir))))
+
+(define-key hanxic/personal-map (kbd "f") #'hanxic/open-in-finder)
+
+(defun hanxic/iterm-dir ()
+  "Return the directory to open in iTerm.
+In dired, the dired directory. In a file buffer, the file's
+parent directory. Otherwise, `default-directory'."
+  (expand-file-name
+   (cond
+    ((derived-mode-p 'dired-mode)
+     (dired-current-directory))
+    (buffer-file-name
+     (file-name-directory buffer-file-name))
+    (t default-directory))))
+
+(defun hanxic/open-in-iterm-window ()
+  "Open the current directory in a new iTerm window."
+  (interactive)
+  (let ((dir (hanxic/iterm-dir)))
+    (do-applescript
+     (format "tell application \"iTerm\"
+  create window with default profile
+  tell current session of current window
+    write text \"cd %s\"
+  end tell
+end tell" (shell-quote-argument dir)))))
+
+(defun hanxic/open-in-iterm-tab ()
+  "Open the current directory in a new iTerm tab.
+If an iTerm window exists, open a new tab there. Otherwise, open
+a new window."
+  (interactive)
+  (let ((dir (hanxic/iterm-dir)))
+    (do-applescript
+     (format "tell application \"iTerm\"
+  if it is not running then
+    activate
+    if (count windows) is 0 then
+      create window with default profile
+    end if
+  else if (count windows) is 0 then
+    create window with default profile
+  else
+    tell current window
+      create tab with default profile
+    end tell
+  end if
+  tell current window
+    tell current session
+      write text \"cd %s\"
+    end tell
+  end tell
+end tell" (shell-quote-argument dir)))))
+
+(define-key hanxic/personal-map (kbd "i") #'hanxic/open-in-iterm-tab)
+(define-key hanxic/personal-map (kbd "I") #'hanxic/open-in-iterm-window)
+
 (define-key hanxic/personal-map (kbd "t") #'vterm)
 (define-key hanxic/personal-map (kbd "T") #'multi-vterm)
 
@@ -1299,14 +1368,20 @@ Returns:
      "10d44b43eb420d1dc019700cdec828ed9d0e8aeab130083f413040881d9453ca" default))
  '(helm-minibuffer-history-key "M-p")
  '(package-selected-packages
-   '(autothemer company-auctex company-coq copilot csv-mode dune
-                ef-themes evil-collection evil-nerd-commenter flycheck-haskell
+   '(autothemer company-auctex company-coq copilot csv-mode dune ef-themes
+                evil-collection evil-nerd-commenter flycheck-haskell
                 flycheck-ocaml helm-lsp helm-projectile helm-rg helpful
-                hlint-refactor lsp-haskell lsp-ui magit multi-vterm
-                ocamlformat org-fragtog proof-general telephone-line tuareg
-                undo-fu web-mode yasnippet-snippets))
+                hlint-refactor lsp-haskell lsp-ui magit multi-vterm ocamlformat
+                org-fragtog proof-general telephone-line tuareg undo-fu web-mode
+                yasnippet-snippets))
  '(safe-local-variable-values
-   '((jinx-dir-local-words . "ElDoc Nael Mekeor Melire reindent")))
+   '((eval setq TeX-master-directory
+           (file-name-directory (directory-file-name default-directory)))
+     (eval setq TeX-master
+           (file-name-directory (directory-file-name default-directory)))
+     (eval setq default-directory
+           (file-name-directory (directory-file-name default-directory)))
+     (jinx-dir-local-words . "ElDoc Nael Mekeor Melire reindent")))
  '(warning-suppress-log-types '((lsp-mode))))
 (custom-set-faces
  ;; custom-set-faces was added by Custom.
