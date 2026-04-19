@@ -444,7 +444,8 @@
 (use-package yasnippet                  ; Snippets
   :ensure t
   :commands yas-minor-mode
-  :hook ((prog-mode . yas-minor-mode))
+  :hook ((prog-mode . yas-minor-mode)
+         (LaTeX-mode . yas-minor-mode))
   :init
   (setq
    yas-verbosity 1                      ; No need to be so verbose
@@ -471,6 +472,51 @@
           (lambda () (set (make-local-variable 'TeX-electric-math)
                           (cons "\\(" "\\)"))))
 (setq LaTeX-includegraphics-read-file 'LaTeX-includegraphics-read-file-relative)
+
+(defun hanxic/new-research-note (date)
+  "Create a new research note for DATE in the project's notes/ directory.
+Opens the file and expands the research-note yasnippet template."
+  (interactive
+   (list (read-string "Date (YYYY-MM-DD): "
+                      (format-time-string "%Y-%m-%d"))))
+  (let* ((root (or (when-let ((proj (project-current nil)))
+                     (project-root proj))
+                   default-directory))
+         (dir  (expand-file-name "notes" root))
+         (file (expand-file-name (concat date ".tex") dir)))
+    (when (file-exists-p file)
+      (find-file file)
+      (user-error "Note %s already exists" date))
+    (find-file file)
+    (insert "\\section{" date "}\n"
+            "\n"
+            "\\subsection{What did I do last week?}\n"
+            "\\begin{itemize}\n"
+            "  \\item \n"
+            "\\end{itemize}\n"
+            "\n"
+            "\\subsection{Questions}\n"
+            "\\begin{itemize}\n"
+            "  \\item \n"
+            "\\end{itemize}\n"
+            "\n"
+            "\\subsection{Next Step}\n"
+            "\\begin{itemize}\n"
+            "  \\item \n"
+            "\\end{itemize}\n"
+            "\n"
+            "\n"
+            "%%% Local Variables:\n"
+            "%%% eval: (setq TeX-master\n"
+            "%%%             (file-name-directory\n"
+            "%%%              (directory-file-name default-directory)))\n"
+            "%%% End:\n")
+    (save-buffer)
+    (hack-local-variables)
+    (goto-char (point-min))
+    (search-forward "\\item " nil t)))
+
+(define-key hanxic/personal-map (kbd "n") #'hanxic/new-research-note)
 
 ;; ;;; LSP mode
 (use-package lsp-mode
@@ -1131,7 +1177,7 @@ parent directory. Otherwise, `default-directory'."
   (expand-file-name
    (cond
     ((derived-mode-p 'dired-mode)
-     (dired-current-directory))
+     default-directory)
     (buffer-file-name
      (file-name-directory buffer-file-name))
     (t default-directory))))
