@@ -354,6 +354,8 @@
 ;;; Org mode
 (add-to-list 'load-path (concat user-emacs-directory "lisp"))
 (require 'org-setup)
+(require 'todo-manager)
+(define-key hanxic/personal-org-map (kbd "t") #'hanxic/todo)
 
 
 ;;; Latex
