@@ -67,7 +67,10 @@
  '(helm-minibuffer-history-key "M-p")
  '(package-selected-packages nil)
  '(safe-local-variable-values
-   '((eval setq TeX-master-directory
+   '((eval setq-local default-directory
+           (or (locate-dominating-file default-directory "Makefile")
+               default-directory))
+     (eval setq TeX-master-directory
            (file-name-directory (directory-file-name default-directory)))
      (eval setq TeX-master
            (file-name-directory (directory-file-name default-directory)))

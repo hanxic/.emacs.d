@@ -24,7 +24,8 @@
   (defun my/TeX-run-make-at-project-root (name command file)
     "Run make from the project root (project.el), falling back to current dir."
     (let* ((proj (project-current nil))
-           (root (when proj (project-root proj))))
+           (root (when proj (project-root proj)))
+           (default-directory (or root default-directory)))
       (TeX-run-compile name command file)))
 
   (add-to-list 'TeX-command-list
@@ -34,17 +35,25 @@
   (setq TeX-command-list
         (assq-delete-all "Make" TeX-command-list))
   (push '("Make" "make" my/TeX-run-make-at-project-root nil t) TeX-command-list)
-  (setq Tex-command-default "Make")
+  (setq TeX-command-default "Make")
 
-  (defun my/TeX-set-default-command ()
-    "If project root has Makefile, default to Make; else default to LatexMk."
-    (let* ((proj (project-current nil))
-           (root (when proj (project-root proj)))
-           (has-makefile (and root (file-exists-p (expand-file-name "Makefile" root)))))
-      (setq-local TeX-command-default
-                  (if has-makefile "Make" "LatexMk"))))
+  (defun my/TeX-force-make-default ()
+    (setq-local TeX-command-default "Make"))
 
-  (add-hook 'LaTeX-mode-hook #'my/TeX-set-default-command))
+  (add-hook 'LaTeX-mode-hook #'my/TeX-force-make-default)
+
+  (defun my/TeX-command-default-always-make (&rest _)
+    "Always return \"Make\" as the next TeX command."
+    "Make")
+  (advice-add 'TeX-command-default :override #'my/TeX-command-default-always-make)
+
+  (defun my/TeX-process-check-kill (orig name)
+    "Silently kill any running TeX process for NAME instead of prompting."
+    (let (process)
+      (while (and (setq process (TeX-process name))
+                  (eq (process-status process) 'run))
+        (delete-process process))))
+  (advice-add 'TeX-process-check :around #'my/TeX-process-check-kill))
 
 (setq compilation-scroll-output t)
 (setq TeX-auto-save t)
@@ -113,7 +122,7 @@
 
 (add-hook 'TeX-mode-hook
           (lambda () (set (make-local-variable 'TeX-electric-math)
-                          (cons "\\(" "\\)"))))
+                          (cons "$" "$"))))
 (add-hook 'plain-TeX-mode-hook
           (lambda () (set (make-local-variable 'TeX-electric-math)
                           (cons "$" "$"))))

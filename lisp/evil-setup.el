@@ -49,6 +49,33 @@
 (define-key isearch-mode-map (kbd "<down>") 'isearch-ring-advance)
 (define-key isearch-mode-map (kbd "<up>")   'isearch-ring-retreat)
 
+;;; Generic `f`/`F` text objects: prompt for a char, select between matches.
+;;; `;` / `,` reuse the last char (vim-style repeat).
+(defvar hanxic/evil-find-char-last nil
+  "Last char used by `hanxic/evil-a-find-char' / `hanxic/evil-inner-find-char'.")
+
+(defun hanxic/evil--find-char-read ()
+  (setq hanxic/evil-find-char-last (read-char "Char: ")))
+
+(defun hanxic/evil--find-char-repeat ()
+  (or hanxic/evil-find-char-last (user-error "No previous f/F")))
+
+(with-eval-after-load 'evil
+  (evil-define-text-object hanxic/evil-a-find-char (count &optional beg end type)
+    (evil-select-quote (hanxic/evil--find-char-read) beg end type count t))
+  (evil-define-text-object hanxic/evil-inner-find-char (count &optional beg end type)
+    (evil-select-quote (hanxic/evil--find-char-read) beg end type count nil))
+  (evil-define-text-object hanxic/evil-a-find-char-repeat (count &optional beg end type)
+    (evil-select-quote (hanxic/evil--find-char-repeat) beg end type count t))
+  (evil-define-text-object hanxic/evil-inner-find-char-repeat (count &optional beg end type)
+    (evil-select-quote (hanxic/evil--find-char-repeat) beg end type count nil))
+  (dolist (k '("f" "F"))
+    (define-key evil-outer-text-objects-map k #'hanxic/evil-a-find-char)
+    (define-key evil-inner-text-objects-map k #'hanxic/evil-inner-find-char))
+  (dolist (k '(";" ","))
+    (define-key evil-outer-text-objects-map k #'hanxic/evil-a-find-char-repeat)
+    (define-key evil-inner-text-objects-map k #'hanxic/evil-inner-find-char-repeat)))
+
 ;;; Evil-collection
 (use-package evil-collection
   :after evil
