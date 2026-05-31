@@ -1,0 +1,26 @@
+# -*- mode: snippet -*-
+# name: research-note
+# key: rnote
+# --
+\section{${1:`(format-time-string "%Y-%m-%d")`}}
+
+\subsection{What did I do last week?}
+\begin{itemize}
+  \item $2
+\end{itemize}
+
+\subsection{Questions}
+\begin{itemize}
+  \item $3
+\end{itemize}
+
+\subsection{Next Step}
+\begin{itemize}
+  \item $4
+\end{itemize}
+
+%%% Local Variables:
+%%% eval: (setq TeX-master
+%%%             (file-name-directory
+%%%              (directory-file-name default-directory)))
+%%% End:

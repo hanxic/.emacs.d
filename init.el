@@ -68,6 +68,8 @@
  '(package-selected-packages nil)
  '(safe-local-variable-values
    '((eval setq-local default-directory
+           (expand-file-name "~/research/papers/opcol/"))
+     (eval setq-local default-directory
            (or (locate-dominating-file default-directory "Makefile")
                default-directory))
      (eval setq TeX-master-directory

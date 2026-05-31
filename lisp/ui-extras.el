@@ -3,7 +3,22 @@
 ;;; Dired
 (with-eval-after-load 'dired
   (define-key dired-mode-map "?" #'dired-summary)
-  (define-key dired-mode-map (kbd "C-c +") #'dired-create-empty-file))
+  (define-key dired-mode-map (kbd "C-c +") #'dired-create-empty-file)
+  ;; Revert existing dired buffers on jump so `dired-goto-file' can find
+  ;; the current file (otherwise stale listings drop the cursor at top).
+  (setq dired-auto-revert-buffer t))
+
+;;; `dired-jump' positions cursor on the file you jumped from.
+(autoload 'dired-jump "dired" nil t)
+(global-set-key (kbd "C-x C-j") #'dired-jump)
+(global-set-key (kbd "C-x j")   #'dired-jump)
+
+;;; Bypass helm for dired rename (R) — use plain completing-read instead.
+(with-eval-after-load 'helm-mode
+  (dolist (cmd '(dired-do-rename
+                 dired-do-rename-regexp
+                 dired-create-directory))
+    (add-to-list 'helm-completing-read-handlers-alist (cons cmd nil))))
 
 ;;; Preview commands
 (defvar hanxic/personal-preview-map

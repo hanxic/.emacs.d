@@ -97,5 +97,18 @@
 
 (advice-add 'helm-mini :around #'hanxic/hide-buffers-from-helm)
 
+;; helm-posframe interaction: `helm--delete-frame-function' is on
+;; `delete-frame-functions' and calls `top-level' to abort helm. When the
+;; posframe child frame is deleted outside an active helm session, this
+;; signals "No recursive edit is in progress". Swallow that user-error.
+(with-eval-after-load 'helm
+  (defun hanxic/helm-delete-frame-guarded (orig-fn &rest args)
+    (condition-case _err
+        (apply orig-fn args)
+      (user-error nil)))
+  (when (fboundp 'helm--delete-frame-function)
+    (advice-add 'helm--delete-frame-function :around
+                #'hanxic/helm-delete-frame-guarded)))
+
 (provide 'completion-ui)
 ;;; completion-ui.el ends here

@@ -120,12 +120,88 @@
 ;;             (local-set-key (kbd "RET") #'hanxic/latex-newline)
 ;;             (add-hook 'before-save-hook #'hanxic/latex-format-sentences nil t)))
 
-(add-hook 'TeX-mode-hook
-          (lambda () (set (make-local-variable 'TeX-electric-math)
-                          (cons "$" "$"))))
-(add-hook 'plain-TeX-mode-hook
-          (lambda () (set (make-local-variable 'TeX-electric-math)
-                          (cons "$" "$"))))
+;; Make `LaTeX-indent-line' tolerant of unmatched environments so that
+;; `indent-region' over a buffer (e.g. an \input'd subfile with no local
+;; \begin{document}) completes instead of aborting at the first \end whose
+;; \begin lives in the parent file.
+(with-eval-after-load 'latex
+  (defun hanxic/LaTeX-indent-line-tolerant (orig-fn &rest args)
+    (condition-case _err
+        (apply orig-fn args)
+      (error nil)))
+  (advice-add 'LaTeX-indent-line :around #'hanxic/LaTeX-indent-line-tolerant))
+
+;;; Pairing is handled by yasnippet snippets in ~/.emacs.d/snippets/latex-mode/.
+;;; Keys: `(' `[' `{' `\{' `\[' for the plain pairs; `((' `[[' `{{' for the
+;;; `\left ... \right' variants. See the `yas-key-syntaxes' tweak below — it
+;;; makes these fire after arbitrary preceding text. Subscript/superscript
+;;; pairs `_{}'/`^{}' come from the same `{' snippet (type `_{<TAB>' or
+;;; `^{<TAB>'), so AUCTeX's electric sub/superscript is disabled. `$' stays
+;;; electric since yasnippet can't isolate a single `$'.
+(setq LaTeX-electric-left-right-brace nil
+      TeX-electric-math '("$" . "$")
+      TeX-electric-sub-and-superscript nil
+      TeX-electric-escape nil)
+
+;;; Smart delete for empty `^{}' / `_{}': backspace, forward-delete, evil `x'
+;;; and `X' inside such a construct remove the whole thing in one go.
+
+(defun hanxic/latex-smart-delete-region (direction)
+  "If the char being deleted in DIRECTION (`back' or `forward') sits inside
+an empty/whitespace `^{}'/`_{}', delete the whole construct and return t.
+Otherwise return nil."
+  (let* ((target (if (eq direction 'back) (1- (point)) (point))))
+    (and (>= target (point-min))
+         (< target (point-max))
+         (let ((bounds (save-excursion
+                         (beginning-of-line)
+                         (catch 'found
+                           (while (re-search-forward "[_^]{[ \t]*}"
+                                                     (line-end-position) t)
+                             (when (and (<= (match-beginning 0) target)
+                                        (< target (match-end 0)))
+                               (throw 'found (cons (match-beginning 0)
+                                                   (match-end 0)))))))))
+           (when bounds
+             (delete-region (car bounds) (cdr bounds))
+             t)))))
+
+(defun hanxic/latex-smart-backspace ()
+  "Backspace, promoting to whole-`^{}'/`_{}' delete when applicable."
+  (interactive)
+  (unless (hanxic/latex-smart-delete-region 'back)
+    (delete-char -1)))
+
+(defun hanxic/latex-smart-delete-forward ()
+  "Forward delete, promoting to whole-`^{}'/`_{}' delete when applicable."
+  (interactive)
+  (unless (hanxic/latex-smart-delete-region 'forward)
+    (delete-char 1)))
+
+(defun hanxic/latex-evil-x ()
+  "Evil `x', promoting to whole-`^{}'/`_{}' delete when applicable."
+  (interactive)
+  (unless (hanxic/latex-smart-delete-region 'forward)
+    (call-interactively #'evil-delete-char)))
+
+(defun hanxic/latex-evil-X ()
+  "Evil `X', promoting to whole-`^{}'/`_{}' delete when applicable."
+  (interactive)
+  (unless (hanxic/latex-smart-delete-region 'back)
+    (call-interactively #'evil-delete-backward-char)))
+
+(with-eval-after-load 'latex
+  (define-key LaTeX-mode-map (kbd "<backspace>") #'hanxic/latex-smart-backspace)
+  (define-key LaTeX-mode-map (kbd "DEL")         #'hanxic/latex-smart-backspace))
+
+(with-eval-after-load 'evil
+  (with-eval-after-load 'latex
+    (evil-define-key 'insert LaTeX-mode-map
+      (kbd "<backspace>") #'hanxic/latex-smart-backspace
+      (kbd "DEL")         #'hanxic/latex-smart-backspace)
+    (evil-define-key 'normal LaTeX-mode-map
+      "x" #'hanxic/latex-evil-x
+      "X" #'hanxic/latex-evil-X)))
 
 (dolist (hook '(text-mode-hook))
   (add-hook hook (lambda () (flyspell-mode 1))))
@@ -145,7 +221,23 @@
          (LaTeX-mode . yas-minor-mode))
   :init
   (setq yas-verbosity 1
-        yas-wrap-around-region t))
+        yas-wrap-around-region t
+        ;; Allow snippet expansion inside an active snippet field, so e.g.
+        ;; `_{<TAB>' still fires when the cursor is inside an outer `(...)'.
+        yas-triggers-in-field t)
+  :config
+  ;; Default `yas-key-syntaxes' only isolates word chars or non-whitespace
+  ;; runs, so a key like `(' or `((' won't trigger after a letter (the
+  ;; non-whitespace strategy yields `foo((', which matches nothing). Try
+  ;; the last 2 chars and then the last 1 char first so single/double-
+  ;; punctuation triggers fire regardless of preceding text.
+  (defun hanxic/yas-key-fixed-2 (_original)
+    (goto-char (max (point-min) (- (point) 2))))
+  (defun hanxic/yas-key-fixed-1 (_original)
+    (goto-char (max (point-min) (- (point) 1))))
+  (setq yas-key-syntaxes
+        (append (list #'hanxic/yas-key-fixed-2 #'hanxic/yas-key-fixed-1)
+                yas-key-syntaxes)))
 
 (use-package yasnippet-snippets
   :ensure t
