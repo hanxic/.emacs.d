@@ -57,14 +57,16 @@
 
 (define-key hanxic/personal-helm-map (kbd "s") #'helm-rg)
 
-;;; Helm-descbinds — searchable keybinding manual.
-;; Remaps `describe-bindings' (C-h b) to a helm buffer you can fuzzy-filter by
-;; key or command name. This is the "search through the manual" entry point.
+;;; Helm-descbinds — searchable keybinding manual (on demand).
+;; `C-h b' gives a helm buffer you can fuzzy-filter by key or command name.
+;; NOTE: `helm-descbinds-mode' (the global mode) is mutually exclusive with
+;; `which-key-mode' — enabling it force-disables which-key's automatic bottom
+;; popup. So we deliberately DO NOT enable the mode; we just bind the command
+;; to `C-h b' for on-demand search and let which-key own the popup.
 (use-package helm-descbinds
   :ensure t
   :after helm
-  :config
-  (helm-descbinds-mode))
+  :bind ("C-h b" . helm-descbinds))
 
 ;;; Posframe — display Helm in a centered floating frame
 (use-package posframe

@@ -15,7 +15,9 @@
   :diminish which-key-mode
   :config
   (setq which-key-idle-delay 0.3)
-  (which-key-mode)
+  ;; Pass an explicit 1 — a bare (which-key-mode) TOGGLES, and since Emacs 30
+  ;; ships which-key on by default that toggle would turn the popup OFF.
+  (which-key-mode 1)
   ;; Label the prefix groups so the popup shows intent, not raw keymap names.
   (which-key-add-key-based-replacements
     "C-c p"   "personal"

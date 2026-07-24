@@ -14,7 +14,7 @@ A static list goes stale the moment you rebind something. These stay current:
 |------|-----|-------------------|
 | **which-key** | Just pause after a prefix (`C-c p`, `C-c o`, …) | A popup of every key + command under that prefix. Already on (0.3s delay). |
 | **describe-bindings** | `C-h b` | Every active binding in the buffer. |
-| **helm-descbinds** *(recommended add)* | `C-h b` | Same, but fuzzy-searchable by key **or** command name. |
+| **helm-descbinds** | `C-h b` | Same, but fuzzy-searchable by key **or** command name. |
 | **helpful** | `C-c C-d` (at point), `C-h k` <key>, `C-h F` <fn> | Rich help: source, docs, and what a key/command does. |
 
 > Rule of thumb: to *find* a key, type its prefix and read the which-key popup.
@@ -30,7 +30,7 @@ Everything below is the map of the **custom layer** on top of that.
 Almost all personal commands live under two prefixes:
 
 - **`C-c p`** — personal map (compile, terminal, files, helm, previews, notes)
-- **`C-c o`** — org map (capture, agenda, todo)
+- **`C-c o`** — org map (journal, notes, math preview)
 
 Type either and pause to let which-key show the menu.
 
@@ -124,28 +124,52 @@ Projectile via helm (`C-c p h`):
 
 ---
 
-## 6. Org & TODO  (`C-c o`)
+## 6. Org: journal, notes, math  (`C-c o`)
 
-| Key | Command |
-|-----|---------|
-| `C-c o c` | org-capture |
-| `C-c o a` | org-agenda |
-| `C-c o t` | personal TODO manager |
+This is the rebuilt org layer. It grows one capability at a time, so it's
+deliberately small: a journal, inline math preview, and a flat pile of notes.
+There is **no** capture/agenda/TODO system here yet — the old one was retired.
 
-### Org agenda (evil normal state)
+### 6a. Journal — one append-only file for random thoughts
 
-`TAB` goto · `RET` switch-to · `+` / `-` priority · `d` day view · `w` week view
+Lives at `~/.org/journal.org`. One heading per day, thoughts underneath.
 
-### TODO manager buffer
+| Key | Command | What it does |
+|-----|---------|--------------|
+| `C-c o j` | journal | Jump to today. New day → adds a `* YYYY-MM-DD Day` heading + an empty `** ` bullet and drops you into insert. Same day → just opens at the end to keep typing. |
+| `C-c o o` | journal-open | Open the journal to read / browse (no new entry). |
+| `C-c o x` | journal-cleanup | Delete empty stubs (a blank `** ` thought, or a day heading with nothing under it). Runs automatically every time you open with `C-c o j`, so accidental empty opens self-heal. |
 
-| Key | Action | Key | Action |
-|-----|--------|-----|--------|
-| `j` / `k` | move down / up | `a` | add |
-| `d` | delete | `t` / `T` | cycle / set state |
-| `p` | set priority | `s` | schedule |
-| `RET` | open notes | `o` | open file |
-| `/` | filter | `\` | clear filter |
-| `g` | refresh | `q` | quit |
+### 6b. Math preview — render LaTeX inline as you type
+
+Works in **any** org buffer (journal, notes, anything). Powered by
+`org-fragtog` + `dvisvgm`.
+
+1. Type math: `$\int_0^1 x^2\,dx$` (inline) or `\[ ... \]` (display).
+2. Move your cursor **off** the fragment → it renders into an image in place.
+3. Move your cursor back **onto** the image → it turns back into editable
+   LaTeX. Edit, leave, it re-renders. That's the whole loop — no key needed.
+
+`C-c C-x C-l` toggles the preview at point by hand if you ever want to.
+Rendering is in-place (image sits where the math is), not a side pane — that's
+intentional, so a page of notes reads top-to-bottom.
+
+### 6c. Notes — a flat pile of `.org` files
+
+Lives in `~/research/scratch/`. No database, no backlinks — just files.
+New notes are named `YYYYMMDD-slug.org` (sorts by date, never collides).
+
+| Key | Command | What it does |
+|-----|---------|--------------|
+| `C-c o n` | note-new | Prompt a title → creates `~/research/scratch/YYYYMMDD-slug.org` with a `#+TITLE:` header, drops you in (math preview live). |
+| `C-c o f` | note-find | Fuzzy-pick an existing note by name (helm). Date prefix + slug make this behave like title search. |
+
+**Managing notes** (delete / rename / move) is just **dired** on the folder —
+open it, then `d`/`x` to delete, `R` to rename, `m`+`R` to move. Nothing new to
+learn.
+
+> Note: `C-c p n` (§4) is a *different* thing — a per-project weekly research
+> log in `.tex`. These `C-c o` notes are your ad-hoc `.org` notes with math.
 
 ---
 
