@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: \left( \right)
+# key: ((
+# --
+`(if (bolp) "" "\n")`\left(
+  ${1:$$(yas-selected-text)}
+\right)
+$0

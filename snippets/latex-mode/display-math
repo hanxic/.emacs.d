@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: \[ \] (display math)
+# key: \[
+# --
+`(if (save-excursion (skip-chars-backward " \t") (bolp)) "" "\n")`\[
+  ${1:$$(yas-selected-text)}
+\]$0
