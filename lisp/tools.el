@@ -15,7 +15,14 @@
   :diminish which-key-mode
   :config
   (setq which-key-idle-delay 0.3)
-  (which-key-mode))
+  (which-key-mode)
+  ;; Label the prefix groups so the popup shows intent, not raw keymap names.
+  (which-key-add-key-based-replacements
+    "C-c p"   "personal"
+    "C-c p h" "helm/project"
+    "C-c p p" "preview"
+    "C-c o"   "org"
+    "C-c C-j" "flycheck-nav"))
 
 ;;; Magit
 (use-package magit

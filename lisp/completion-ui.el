@@ -57,6 +57,15 @@
 
 (define-key hanxic/personal-helm-map (kbd "s") #'helm-rg)
 
+;;; Helm-descbinds — searchable keybinding manual.
+;; Remaps `describe-bindings' (C-h b) to a helm buffer you can fuzzy-filter by
+;; key or command name. This is the "search through the manual" entry point.
+(use-package helm-descbinds
+  :ensure t
+  :after helm
+  :config
+  (helm-descbinds-mode))
+
 ;;; Posframe — display Helm in a centered floating frame
 (use-package posframe
   :ensure t

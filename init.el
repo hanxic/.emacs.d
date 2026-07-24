@@ -56,6 +56,7 @@
 (require 'evil-setup)
 (require 'tools)
 (require 'terminal)
+(require 'compile-setup)
 (require 'org-setup)
 (require 'todo-manager)
 (define-key hanxic/personal-org-map (kbd "t") #'hanxic/todo)

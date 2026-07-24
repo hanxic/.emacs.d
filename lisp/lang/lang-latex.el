@@ -214,6 +214,21 @@ Otherwise return nil."
     (let ((default-directory root))
       (compile "make"))))
 
+(defun hanxic/latex-compile (&optional _arg)
+  "Compile the current LaTeX document.
+Run `make' from the project root when a Makefile exists, otherwise fall
+back to the AUCTeX default command chain.  This is what `hanxic/compile'
+\(C-c p c) calls in LaTeX buffers."
+  (interactive)
+  (if (locate-dominating-file default-directory "Makefile")
+      (hanxic/latex-make)
+    (TeX-command-run-all nil)))
+
+;; Make the shared compile key (C-c p c) build the document in LaTeX buffers.
+(add-hook 'LaTeX-mode-hook
+          (lambda ()
+            (setq-local hanxic/compile-command-function #'hanxic/latex-compile)))
+
 (defun hanxic/close-compilation-window-on-success (buffer status)
   "Close compilation window if compilation finished successfully."
   (when (and (string-match-p "finished" status)
