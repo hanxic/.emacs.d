@@ -1,7 +1,7 @@
 ;;; lang-lsp.el --- LSP mode configuration  -*- lexical-binding: t; -*-
 
 ;;; Performance tuning
-(setq gc-cons-threshold 1280000)
+(setq gc-cons-threshold (* 100 1024 1024))
 (setq read-process-output-max (* 1024 1024))
 (setq lsp-log-io nil)
 

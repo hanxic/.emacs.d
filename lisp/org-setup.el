@@ -19,7 +19,7 @@
   (org-highlight-latex-and-related '(latex))
   (org-use-sub-superscripts '{})
   (org-export-with-LaTeX-fragments t)
-  (org-latex-create formula-image-program 'dvipng)
+  (org-preview-latex-default-process 'dvipng)
   (org-hide-emphasis-markers t)
   :config
   (setq org-format-latex-options
@@ -290,8 +290,8 @@
       (when create-file
         (insert (format ":%s: [[file:%s/%s.org]]\n" file-prop subdir slug)))
       (insert (format ":CREATED: %s\n" created))
-      (when (and target (not (string-empty-p target)))
-        (insert (format ":TARGET: %s\n" target)))
+      (when (and deadline-date (not (string-empty-p deadline-date)))
+        (insert (format ":TARGET: %s\n" deadline-date)))
       (when types-str
         (insert (format ":TYPES: %s\n" types-str)))
       (insert ":END:\n")
@@ -671,28 +671,6 @@
   (message "projects.org updated"))
 
 (advice-add 'org-agenda :before (lambda (&rest _) (hanxic/org-refresh-agenda-files)))
-
-(setq org-agenda-custom-commands
-      `(("g" "GTD Review"
-         ((agenda "" ((org-agenda-span 'week)
-                      (org-deadline-warning-days 7)
-                      (org-agenda-overriding-header "Schedule")))
-          (todo "NEXT"
-                ((org-agenda-overriding-header "Next Actions")
-                 (org-agenda-sorting-strategy '(priority-down category-up))))
-          (todo "IN-PROGRESS"
-                ((org-agenda-overriding-header "In Progress")
-                 (org-agenda-sorting-strategy '(priority-down category-up))))
-          (todo "WAITING"
-                ((org-agenda-overriding-header "Waiting On")
-                 (org-agenda-sorting-strategy '(category-up))))
-          (todo "TODO"
-                ((org-agenda-overriding-header "Backlog")
-                 (org-agenda-sorting-strategy '(priority-down category-up))))))
-        ("i" "Inbox"
-         ((alltodo ""
-                   ((org-agenda-files ,(list hanxic/org-inbox-file))
-                    (org-agenda-overriding-header "Unprocessed Inbox")))))))
 
 (setq org-todo-keywords
       '((sequence "TODO(t)" "NEXT(n)" "IN-PROGRESS(i)" "WAITING(w)" "|" "DONE(d)" "CANCELLED(c)")))

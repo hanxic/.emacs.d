@@ -66,6 +66,16 @@
 (add-hook 'LaTeX-mode-hook 'flyspell-mode)
 (add-hook 'TeX-mode-hook 'turn-on-auto-fill)
 
+;;; Keep the chktex flycheck checker ON, but silence the warnings that are
+;;; pure noise in math-heavy LaTeX (they used to flood past
+;;; `flycheck-checker-error-threshold' and disable the checker entirely):
+;;;   1  - "Command terminated with space"                 (\alpha x, \sum f, ...)
+;;;   36 - "You should put a space in front of parenthesis" (f(x))
+;;;   3  - "Enclose the previous parenthesis with {}"        (math sub/superscripts)
+;;; Kept: 2 and 24 (non-breaking-space checks before \cite/\ref) are real.
+(with-eval-after-load 'flycheck
+  (setq flycheck-chktex-extra-flags '("-n1" "-n36" "-n3")))
+
 ;; ;;; Auto-fill only inside math environments
 ;; (defun hanxic/latex-math-auto-fill ()
 ;;   "Auto-fill only when point is inside a LaTeX math environment."
