@@ -29,6 +29,7 @@
 ;;; Projectile
 (use-package projectile
   :ensure t
+  :defer 1
   :config
   (projectile-mode)
   (setq projectile-enable-caching t

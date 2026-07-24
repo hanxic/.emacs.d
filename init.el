@@ -19,10 +19,18 @@
     (add-hook 'after-make-frame-functions #'my/apply-font)
   (my/apply-font))
 
-;;; Server
-(require 'server)
-(unless (server-running-p)
-  (server-start))
+;;; Server — under --daemon Emacs starts its own server, so only start one
+;;; here for a normal (non-daemon) session.
+(unless (daemonp)
+  (require 'server)
+  (unless (server-running-p)
+    (server-start)))
+
+;;; Restore GC to a sane steady-state after startup (raised in early-init.el).
+(add-hook 'after-init-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 100 1024 1024)
+                  gc-cons-percentage 0.1)))
 
 ;;; Package bootstrap
 (require 'package)

@@ -76,60 +76,6 @@
 (with-eval-after-load 'flycheck
   (setq flycheck-chktex-extra-flags '("-n1" "-n36" "-n3")))
 
-;; ;;; Auto-fill only inside math environments
-;; (defun hanxic/latex-math-auto-fill ()
-;;   "Auto-fill only when point is inside a LaTeX math environment."
-;;   (when (and (> (current-column) fill-column)
-;;              (fboundp 'texmathp)
-;;              (texmathp))
-;;     (do-auto-fill)))
-
-;; ;;; Smart RET: semantic line break after `. ` or `, ` in prose
-;; (defun hanxic/latex-newline ()
-;;   "Smart RET for LaTeX.
-;; After `.[spaces]` or `,[spaces]` outside math, insert a semantic line break.
-;; Inside math environments or elsewhere, insert a regular newline."
-;;   (interactive)
-;;   (if (and (looking-back "[.,] +" (line-beginning-position))
-;;            (not (and (fboundp 'texmathp) (texmathp))))
-;;       (progn
-;;         (delete-horizontal-space)
-;;         (newline))
-;;     (newline)))
-
-;; ;;; Auto-format: reformat prose to one sentence per line before saving
-;; (defun hanxic/latex-format-sentences ()
-;;   "Reformat prose paragraphs in current buffer to one sentence per line.
-;; Leaves blank lines, comments (%), and LaTeX commands (\\) untouched."
-;;   (save-excursion
-;;     (goto-char (point-min))
-;;     (while (not (eobp))
-;;       (cond
-;;        ((looking-at "^[ \t]*$")     (forward-line 1)) ; blank line
-;;        ((looking-at "^[ \t]*[%\\]") (forward-line 1)) ; comment or command
-;;        (t
-;;         (let ((start (point)))
-;;           (while (and (not (eobp))
-;;                       (not (looking-at "^[ \t]*$"))
-;;                       (not (looking-at "^[ \t]*[%\\]")))
-;;             (forward-line 1))
-;;           (let* ((end  (point))
-;;                  (text (buffer-substring-no-properties start end))
-;;                  (text (replace-regexp-in-string "[ \t]*\n[ \t]*" " " text))
-;;                  (text (replace-regexp-in-string "[ \t]+" " " text))
-;;                  (text (string-trim text))
-;;                  (text (replace-regexp-in-string
-;;                         "\\([.!?]\\) +\\([A-Z]\\)" "\\1\n\\2" text)))
-;;             (delete-region start end)
-;;             (insert text "\n"))))))))
-
-;; (add-hook 'LaTeX-mode-hook
-;;           (lambda ()
-;;             (auto-fill-mode 1)
-;;             (setq-local auto-fill-function #'hanxic/latex-math-auto-fill)
-;;             (local-set-key (kbd "RET") #'hanxic/latex-newline)
-;;             (add-hook 'before-save-hook #'hanxic/latex-format-sentences nil t)))
-
 ;; Make `LaTeX-indent-line' tolerant of unmatched environments so that
 ;; `indent-region' over a buffer (e.g. an \input'd subfile with no local
 ;; \begin{document}) completes instead of aborting at the first \end whose
@@ -141,10 +87,12 @@
       (error nil)))
   (advice-add 'LaTeX-indent-line :around #'hanxic/LaTeX-indent-line-tolerant))
 
-;;; Pairing is handled by yasnippet snippets in ~/.emacs.d/snippets/latex-mode/.
-;;; Keys: `(' `[' `{' `\{' `\[' for the plain pairs; `((' `[[' `{{' for the
-;;; `\left ... \right' variants. See the `yas-key-syntaxes' tweak below — it
-;;; makes these fire after arbitrary preceding text. Subscript/superscript
+;;; Pairing is handled by yasnippet.  The plain pairs `(' `[' `{' live in
+;;; ~/.emacs.d/snippets/fundamental-mode/ so they fire in every mode (yas
+;;; treats `fundamental-mode' as the universal ancestor).  The LaTeX-only
+;;; variants — `\{' `\[' and the `((' `[[' `{{' `\left ... \right' forms —
+;;; stay in ~/.emacs.d/snippets/latex-mode/.  See the `yas-key-syntaxes' tweak
+;;; below — it makes these fire after arbitrary preceding text. Subscript/superscript
 ;;; pairs `_{}'/`^{}' come from the same `{' snippet (type `_{<TAB>' or
 ;;; `^{<TAB>'), so AUCTeX's electric sub/superscript is disabled. `$' stays
 ;;; electric since yasnippet can't isolate a single `$'.
@@ -226,9 +174,7 @@ Otherwise return nil."
 ;;; YASnippet
 (use-package yasnippet
   :ensure t
-  :commands yas-minor-mode
-  :hook ((prog-mode  . yas-minor-mode)
-         (LaTeX-mode . yas-minor-mode))
+  :defer 1
   :init
   (setq yas-verbosity 1
         yas-wrap-around-region t
@@ -247,7 +193,10 @@ Otherwise return nil."
     (goto-char (max (point-min) (- (point) 1))))
   (setq yas-key-syntaxes
         (append (list #'hanxic/yas-key-fixed-2 #'hanxic/yas-key-fixed-1)
-                yas-key-syntaxes)))
+                yas-key-syntaxes))
+  ;; Enable yasnippet in every buffer (not just prog/LaTeX) so the global
+  ;; `(' `[' `{' pairs in snippets/fundamental-mode/ work in all files.
+  (yas-global-mode 1))
 
 (use-package yasnippet-snippets
   :ensure t
@@ -259,41 +208,6 @@ Otherwise return nil."
   :mode ("\\.csv\\'" . csv-mode))
 
 ;;; Compilation helpers
-(defun hanxic/compile-with-callbacks (command on-success on-failure)
-  "Run COMMAND with `compile`.
-If compilation succeeds, call ON-SUCCESS.
-If it exits abnormally, call ON-FAILURE."
-  (let ((done nil))
-    (cl-labels
-        ((handler (buf msg)
-           (unless done
-             (setq done t)
-             (remove-hook 'compilation-finish-functions #'handler)
-             (cond
-              ((string-match "finished" msg) (funcall on-success))
-              ((string-match "killed"   msg) (message "Compilation was killed; ignoring."))
-              (t (funcall on-failure))))))
-      (add-hook 'compilation-finish-functions #'handler)
-      (compile command))))
-
-(defun hanxic/funcall-after-delay-focus (seconds on-focus)
-  "Wait SECONDS, then activate Emacs and call ON-FOCUS."
-  (run-at-time seconds nil
-               (lambda ()
-                 (when (fboundp 'ns-do-applescript)
-                   (ns-do-applescript "tell application \"Emacs\" to activate")
-                   (funcall on-focus)))))
-
-(defun hanxic/invoke-funcall-window (windowname on-focus)
-  "Get the window for WINDOWNAME, then call ON-FOCUS on it."
-  (let ((window (get-buffer-window windowname)))
-    (when (window-live-p window)
-      (funcall on-focus window))))
-
-(defun hanxic/suffix-conversion (filename suffix)
-  "Return FILENAME with extension replaced by SUFFIX."
-  (concat (file-name-sans-extension filename) suffix))
-
 (defun hanxic/latex-make ()
   "Run `make` from project root if a Makefile exists."
   (when-let ((root (locate-dominating-file default-directory "Makefile")))

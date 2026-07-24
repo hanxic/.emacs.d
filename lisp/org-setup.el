@@ -86,11 +86,6 @@
   "Return list of configured section names."
   (mapcar #'car hanxic/org-project-sections))
 
-(defun hanxic/org--section-for-prop (prop)
-  "Find which section uses PROP as its :file-prop."
-  (car (seq-find (lambda (s) (string= (plist-get (cdr s) :file-prop) prop))
-                 hanxic/org-project-sections)))
-
 ;;;; ── Priority (Re)Configuration ──────────────────────────────
 
 (setq org-priority-highest ?A
@@ -716,24 +711,6 @@
           (org-set-property "BLOCKER" new-val))
         (save-buffer)
         (message "Removed blocker: %s" to-remove)))))
-
-(defun hanxic/org--entry-blocked-p ()
-  "Return non-nil if the entry at point has unfinished blockers."
-  (let ((blockers (org-entry-get nil "BLOCKER")))
-    (when (and blockers (not (string-empty-p blockers)))
-      (let* ((blocker-list (split-string blockers ", "))
-             (ctx (hanxic/org--resolve-project-context))
-             (project-slug (car ctx))
-             (master-file (concat hanxic/org-projects-directory project-slug "/" project-slug ".org"))
-             (tasks (hanxic/org--extract-entries master-file "Tasks")))
-        ;; Check if any blocker is not DONE/CANCELLED
-        (seq-some (lambda (b)
-                    (let ((entry (seq-find (lambda (t_)
-                                             (string-match-p (regexp-quote b) (car t_)))
-                                           tasks)))
-                      (when entry
-                        (not (string-match "^\\(DONE\\|CANCELLED\\)" (car entry))))))
-                  blocker-list)))))
 
 ;;;; ── Scheduling helpers ─────────────────────────────────
 

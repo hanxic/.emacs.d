@@ -1,16 +1,22 @@
 ;;; lang-ocaml.el --- OCaml development environment  -*- lexical-binding: t; -*-
 
-;;; OPAM load-path setup
-(let ((prefix (string-trim (shell-command-to-string "opam config var prefix 2> /dev/null"))))
-  (setq opam-dir (if (> (length prefix) 0) prefix nil)))
-(let ((share (string-trim (shell-command-to-string "opam config var share 2> /dev/null"))))
-  (setq opam-share (if (> (length share) 0) share nil)))
-
-(add-to-list 'load-path (concat opam-share "/emacs/site-lisp"))
-
-;; ## added by OPAM user-setup for emacs / base ## you can edit, but keep this line
-(require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
-;; ## end of OPAM user-setup addition for emacs / base ## keep this line
+;;; OPAM / merlin / caml setup — deferred until the first OCaml file loads.
+;; This block runs several synchronous `opam' subprocesses and loads merlin
+;; and caml; doing that at startup is wasted work when no OCaml file is open.
+;; `tuareg' loads from elpa, and `with-eval-after-load' runs before the first
+;; `tuareg-mode-hook', so the merlin/company hooks it installs still apply to
+;; the first OCaml buffer.
+(with-eval-after-load 'tuareg
+  (let ((prefix (string-trim (shell-command-to-string "opam config var prefix 2> /dev/null"))))
+    (setq opam-dir (if (> (length prefix) 0) prefix nil)))
+  (let ((share (string-trim (shell-command-to-string "opam config var share 2> /dev/null"))))
+    (setq opam-share (if (> (length share) 0) share nil)))
+  (add-to-list 'load-path (concat opam-share "/emacs/site-lisp"))
+  ;; ## added by OPAM user-setup for emacs / base ## you can edit, but keep this line
+  (require 'opam-user-setup "~/.emacs.d/opam-user-setup.el")
+  ;; ## end of OPAM user-setup addition for emacs / base ## keep this line
+  ;; Caml (elpa) — needed by tuareg-menhir-mode and .mlg/.mll files.
+  (require 'caml))
 
 (autoload 'tuareg-mode "tuareg" "Major mode for editing Caml code" t)
 (autoload 'camldebug  "camldebug" "Run the Caml debugger" t)
@@ -132,19 +138,15 @@
   (setq merlin-error-after-save nil))
 
 ;;; Flycheck-OCaml
+;; Gate on BOTH flycheck and tuareg so this (which pulls in merlin) only loads
+;; for real OCaml buffers, not at startup when flycheck loads for prog-mode.
 (use-package flycheck-ocaml
   :ensure t
-  :after flycheck
+  :after (flycheck tuareg)
   :hook
   (tuareg-mode . (lambda ()
                    (setq-local merlin-error-after-save nil)
                    (flycheck-ocaml-setup))))
-
-;;; Caml
-(let ((opam-share (ignore-errors (car (process-lines "opam" "var" "share")))))
-  (when (and opam-share (file-directory-p opam-share))
-    (add-to-list 'load-path (expand-file-name "emacs/site-lisp" opam-share))))
-(require 'caml)
 
 (provide 'lang-ocaml)
 ;;; lang-ocaml.el ends here

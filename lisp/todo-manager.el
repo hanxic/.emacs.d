@@ -211,11 +211,6 @@ Returns a due string like \"2026-04-20 10:00\", \"2026-04-20\", or nil."
   "Set priority CHAR (?A ?B ?C or ?\\s to clear) at POS."
   (hanxic/todo--at-pos pos (lambda () (org-priority char))))
 
-(defun hanxic/todo--set-tags-at (pos tags-str)
-  "Set tags from space-separated TAGS-STR at POS."
-  (hanxic/todo--at-pos pos
-   (lambda () (org-set-tags (split-string (string-trim tags-str))))))
-
 (defun hanxic/todo--schedule-at (pos date-str)
   (hanxic/todo--at-pos pos (lambda () (org-schedule nil date-str))))
 
