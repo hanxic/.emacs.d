@@ -22,13 +22,34 @@
     "C-c p h" "helm/project"
     "C-c p p" "preview"
     "C-c o"   "org"
-    "C-c C-j" "flycheck-nav"))
+    "C-c C-j" "flycheck-nav"
+    "C-c ^"   "smerge"))
 
 ;;; Magit
 (use-package magit
   :ensure t
   :bind (("C-x g"   . magit-status)
          ("C-x C-g" . magit-status)))
+
+;;; Merge conflicts
+;; Preferred flow: from magit-status, put point on a conflicted ("Unmerged")
+;; file and press `e' to launch a 3-way ediff (magit-ediff-resolve). Inside
+;; ediff: `n'/`p' move between conflicts, `a'/`b' take the A/B side, `q' saves.
+;; Keep ediff in one frame, split side-by-side (no detached control frame).
+(with-eval-after-load 'ediff
+  (setq ediff-window-setup-function #'ediff-setup-windows-plain
+        ediff-split-window-function #'split-window-horizontally))
+
+;; smerge (C-c ^ ...) stays as the in-buffer fallback; auto-enable it whenever
+;; a buffer actually has conflict markers so you never `M-x smerge-mode' by hand.
+(defun hanxic/maybe-enable-smerge ()
+  "Turn on `smerge-mode' if the buffer contains conflict markers."
+  (save-excursion
+    (goto-char (point-min))
+    (when (re-search-forward "^<<<<<<< " nil t)
+      (smerge-mode 1))))
+(add-hook 'find-file-hook    #'hanxic/maybe-enable-smerge)
+(add-hook 'after-revert-hook #'hanxic/maybe-enable-smerge)
 
 ;;; Flycheck
 (use-package flycheck

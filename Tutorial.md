@@ -183,6 +183,32 @@ Projectile via helm (`C-c p h`):
 | `?` (dired) | dired summary |
 | `C-c +` (dired) | create empty file |
 
+### Resolving merge conflicts
+
+Preferred flow — drive it from magit with ediff (memorable keys, no prefixes):
+
+1. `C-x g` → open magit-status.
+2. Point on a conflicted (**Unmerged**) file → `e` → launches a 3-way ediff.
+3. In ediff: `n` / `p` move between conflicts, `a` take **A** (HEAD/ours),
+   `b` take **B** (theirs/incoming), `!` refine, `q` quit + save.
+4. Back in magit: `s` stage the resolved file, `c c` commit to finish the merge.
+
+Ediff is forced into a single frame (side-by-side) so no floating control
+window appears.
+
+Fallback — **smerge** for quick one-liners. Any file with conflict markers
+auto-enables `smerge-mode`; you never `M-x` it. Don't memorize the keys — press
+`C-c ^` and pause, and which-key lists them (labelled **smerge**):
+
+| Key | Action |
+|-----|--------|
+| `C-c ^ n` / `p` | next / previous conflict |
+| `C-c ^ RET` | keep the hunk at point |
+| `C-c ^ u` | keep upper (HEAD / ours) |
+| `C-c ^ l` or `o` | keep lower (incoming) |
+| `C-c ^ a` | keep both |
+| `C-c ^ E` | hand this conflict to ediff |
+
 ---
 
 ## 10. Language extras
