@@ -1,0 +1,33 @@
+# --- Installed packages / package managers (rebuilt from init.el) ---
+/elpa/
+/quelpa/
+/straight/
+/tree-sitter/
+
+# --- Copilot language-server (npm) ---
+/.cache/
+/node_modules/
+/package.json
+/package-lock.json
+
+# --- Backups, auto-save, compiled output ---
+/backup/
+/auto-save-list/
+*.elc
+*~
+\#*\#
+.\#*
+
+# --- Session / runtime state ---
+/desktop/
+/transient/
+/projects
+/.lsp-session-v1
+/bookmarks
+/recentf
+/saveplace
+/tramp
+/projectile-bookmarks.eld
+
+# --- Stray (real snippets dir is /snippets/) ---
+/snippet/
